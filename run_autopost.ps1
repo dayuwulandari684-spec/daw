@@ -2,18 +2,20 @@
 # run_autopost.ps1
 # Jalankan tiktok_autopost.py langsung dari PowerShell.
 # Cara pakai:
-#   .\run_autopost.ps1              # langsung sekali jalan
-#   .\run_autopost.ps1 -Loop        # jalan terus tiap JAM_INTERVAL jam
-#   .\run_autopost.ps1 -Loop -Jam 3 # jalan terus tiap 3 jam
+#   .\run_autopost.ps1                      # langsung sekali jalan
+#   .\run_autopost.ps1 -Jadwal "21:15"      # tunggu sampai jam 21:15 lalu jalan
+#   .\run_autopost.ps1 -Loop -Interval 4    # loop tiap 4 jam
+#   .\run_autopost.ps1 -Jadwal "21:15" -Loop -Interval 4  # jadwal + loop
 # =============================================================
 
 param(
-    [switch] $Loop,           # aktifkan mode loop
-    [int]    $Jam = 4         # interval antar run (jam), default 4 jam
+    [string] $Jadwal   = "",   # waktu mulai, format "HH:mm"  contoh: "21:15"
+    [switch] $Loop,            # ulangi terus setelah selesai
+    [int]    $Interval = 4     # jeda antar run (jam) kalau -Loop aktif
 )
 
 # --- Sesuaikan path Python dan script di sini ---
-$PythonExe  = "python"                        # ganti ke "python3" kalau perlu
+$PythonExe  = "python"
 $ScriptPath = Join-Path $PSScriptRoot "tiktok_autopost.py"
 # ------------------------------------------------
 
@@ -36,10 +38,38 @@ function Run-Autopost {
     }
 }
 
+function Wait-UntilJadwal {
+    param([string] $WaktuTarget)
+
+    $now    = Get-Date
+    $target = [datetime]::ParseExact(
+                  "$( $now.ToString('yyyy-MM-dd') ) $WaktuTarget",
+                  "yyyy-MM-dd HH:mm", $null)
+
+    # Kalau jam target sudah lewat hari ini, jadwalkan besok
+    if ($target -le $now) {
+        $target = $target.AddDays(1)
+    }
+
+    $selisih = ($target - (Get-Date)).TotalSeconds
+    Write-Host "Menunggu jadwal jam $WaktuTarget (sekitar $( [math]::Round($selisih/60) ) menit lagi)..." -ForegroundColor DarkYellow
+
+    while ((Get-Date) -lt $target) {
+        $sisa = ($target - (Get-Date)).TotalSeconds
+        Write-Host "`r  Mulai dalam $( [math]::Round($sisa) ) detik...  " -NoNewline -ForegroundColor DarkGray
+        Start-Sleep -Seconds 10
+    }
+    Write-Host ""
+}
+
 # --- Jalankan ---
+if ($Jadwal -ne "") {
+    Wait-UntilJadwal -WaktuTarget $Jadwal
+}
+
 if ($Loop) {
-    $intervalDetik = $Jam * 3600
-    Write-Host "Mode LOOP aktif — interval $Jam jam. Tekan Ctrl+C untuk berhenti." -ForegroundColor Magenta
+    $intervalDetik = $Interval * 3600
+    Write-Host "Mode LOOP aktif — interval $Interval jam. Tekan Ctrl+C untuk berhenti." -ForegroundColor Magenta
     while ($true) {
         Run-Autopost
         $berikutnya = (Get-Date).AddSeconds($intervalDetik).ToString("HH:mm:ss")
