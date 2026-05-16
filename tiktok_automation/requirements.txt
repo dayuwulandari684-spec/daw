@@ -1,26 +1,25 @@
-# Web scraping & browser automation
-playwright>=1.42.0
-requests>=2.31.0
-beautifulsoup4>=4.12.0
-lxml>=5.1.0
+# Install semua dengan: pip install -r requirements.txt
+# Lalu: playwright install chromium
 
-# Video & image processing
-moviepy>=1.0.3
+# Browser automation (scraping + upload)
+playwright>=1.42.0
+
+# Image & video processing
 Pillow>=10.2.0
 numpy>=1.26.0
-imageio>=2.33.0
-imageio-ffmpeg>=0.4.9
 
-# Text-to-Speech
+# Text-to-Speech (gratis, tidak perlu API key)
 gTTS>=2.5.1
-pydub>=0.25.1
+pydub>=0.25.1          # normalisasi volume audio (opsional)
 
-# OpenAI (opsional untuk UGC script)
-openai>=1.12.0
-
-# Utils
-python-dotenv>=1.0.1
+# Warna terminal
 colorama>=0.4.6
-tqdm>=4.66.2
-aiohttp>=3.9.3
-httpx>=0.27.0
+
+# HTTP request (backup scraping)
+requests>=2.31.0
+
+# Env file
+python-dotenv>=1.0.1
+
+# (Opsional) Script UGC lebih baik pakai AI
+# openai>=1.12.0
