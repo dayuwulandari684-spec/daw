@@ -294,6 +294,8 @@ def _parse_captured_responses(captured: list, keyword: str) -> list:
     seen_ids = set()
 
     for payload in captured:
+        if not isinstance(payload, dict):
+            continue
         # TikTok bisa wrap data di berbagai level
         items = (
             payload.get("data", {}).get("itemList")
