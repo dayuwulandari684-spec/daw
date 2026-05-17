@@ -13,6 +13,7 @@ import os
 import io
 import re
 import sys
+import gc
 import time
 import json
 import random
@@ -796,9 +797,12 @@ def _slide_product_hero(product: dict, img_path: str,
         try:
             bg = Image.open(img_path).convert("RGB")
             bg = bg.resize((VIDEO_W, VIDEO_H), Image.LANCZOS)
-            bg = bg.filter(ImageFilter.GaussianBlur(radius=28))
+            bg = bg.filter(ImageFilter.GaussianBlur(radius=20))
             dark = Image.new("RGB", bg.size, (0, 0, 0))
-            canvas = Image.blend(bg, dark, 0.55).convert("RGBA")
+            blended = Image.blend(bg, dark, 0.55)
+            bg.close(); del bg, dark
+            canvas = blended.convert("RGBA")
+            blended.close(); del blended
         except Exception:
             canvas = _gradient_bg(*palette).convert("RGBA")
     else:
@@ -809,10 +813,9 @@ def _slide_product_hero(product: dict, img_path: str,
     if has_img:
         try:
             prod = Image.open(img_path).convert("RGBA")
-            prod.thumbnail((int(VIDEO_W * 0.75), int(VIDEO_H * 0.46)), Image.LANCZOS)
+            prod.thumbnail((int(VIDEO_W * 0.72), int(VIDEO_H * 0.44)), Image.LANCZOS)
 
-            # Bingkai putih rounded di belakang foto
-            pad  = 18
+            pad   = 18
             frame = Image.new("RGBA",
                               (prod.width + pad * 2, prod.height + pad * 2),
                               (0, 0, 0, 0))
@@ -820,11 +823,13 @@ def _slide_product_hero(product: dict, img_path: str,
             fd.rounded_rectangle([0, 0, frame.width - 1, frame.height - 1],
                                   radius=28, fill=(255, 255, 255, 230))
             frame.paste(prod, (pad, pad), prod)
+            prod.close(); del prod
 
             x = (VIDEO_W - frame.width) // 2
             y = 110
             canvas.paste(frame, (x, y), frame)
             img_bottom = y + frame.height + 30
+            frame.close(); del frame
         except Exception:
             pass
 
@@ -834,7 +839,9 @@ def _slide_product_hero(product: dict, img_path: str,
     cd       = ImageDraw.Draw(card)
     cd.rounded_rectangle([28, card_top, VIDEO_W - 28, VIDEO_H - 28],
                           radius=44, fill=(12, 12, 24, 218))
-    canvas = Image.alpha_composite(canvas, card)
+    merged = Image.alpha_composite(canvas, card)
+    canvas.close(); card.close(); del canvas, card
+    canvas = merged; del merged
     draw   = ImageDraw.Draw(canvas)
 
     fn   = _get_font(54)
@@ -988,32 +995,32 @@ def create_video(product: dict, script: dict,
     # 1. Hook — dramatis
     s = _slide_hook(script["hook"], "🔥", palette)
     p = os.path.join(slides_d, "01_hook.png")
-    s.save(p)
+    s.save(p); s.close(); del s; gc.collect()
     slide_defs.append((p, SLIDE_DURATION))
 
     # 2. Produk hero — foto besar + info card
     s = _slide_product_hero(product, img_path, palette)
     p = os.path.join(slides_d, "02_product.png")
-    s.save(p)
-    slide_defs.append((p, SLIDE_DURATION + 1))   # 1 detik lebih lama
+    s.save(p); s.close(); del s; gc.collect()
+    slide_defs.append((p, SLIDE_DURATION + 1))
 
     # 3. Jika ada lebih dari 1 foto, tampilkan foto ke-2 juga
     if len(img_paths) > 1:
         s = _slide_product_hero(product, img_paths[1], palette)
         p = os.path.join(slides_d, "02b_product.png")
-        s.save(p)
+        s.save(p); s.close(); del s; gc.collect()
         slide_defs.append((p, SLIDE_DURATION))
 
     # 4. Benefits — daftar keunggulan
     s = _slide_benefits(product, script)
     p = os.path.join(slides_d, "03_benefits.png")
-    s.save(p)
+    s.save(p); s.close(); del s; gc.collect()
     slide_defs.append((p, SLIDE_DURATION))
 
     # 5. CTA — tombol beli
     s = _slide_cta(product, script["cta"])
     p = os.path.join(slides_d, "04_cta.png")
-    s.save(p)
+    s.save(p); s.close(); del s; gc.collect()
     slide_defs.append((p, SLIDE_DURATION))
 
     print(f"  {len(slide_defs)} slide dibuat.")
@@ -1027,7 +1034,7 @@ def create_video(product: dict, script: dict,
             "-i", slide_png,
             "-vf", f"scale={VIDEO_W}:{VIDEO_H},setsar=1",
             "-r", str(FPS),
-            "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+            "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
             "-pix_fmt", "yuv420p",
             clip_out,
         ], f"slide {i+1}")
@@ -1376,6 +1383,7 @@ if __name__ == "__main__":
         if processed < len(products):
             delay = random.randint(8, 15)
             print(f"\nTunggu {delay} detik sebelum produk berikutnya ...\n")
+            gc.collect()
             time.sleep(delay)
 
     print("\n" + "=" * 55)
