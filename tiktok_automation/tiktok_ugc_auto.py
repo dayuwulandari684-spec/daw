@@ -53,6 +53,11 @@ AUTO_UPLOAD        = True
 HEADLESS_SCRAPE    = True             # True = scraping tanpa tampilkan browser
 HEADLESS_UPLOAD    = False            # False = tampilkan browser saat upload
 
+# Google Veo 3 (video AI — jauh lebih bagus dari PIL)
+# Daftar gratis di: https://aistudio.google.com → Get API Key
+GOOGLE_API_KEY = ""        # isi dengan API key dari Google AI Studio
+USE_VEO3       = False     # ganti True setelah isi GOOGLE_API_KEY
+
 CAPTION_TEMPLATE = (
     "{hook}\n\n"
     "✨ {nama}\n"
@@ -729,7 +734,124 @@ def _slide_cta(cta: str) -> "Image.Image":
 
 
 # =============================================================================
-# BUAT VIDEO (PIL + ffmpeg)
+# BUAT VIDEO PAKAI GOOGLE VEO 3
+# =============================================================================
+
+def _build_veo3_prompt(product: dict, script: dict) -> str:
+    """Buat prompt Veo 3 berdasarkan data produk."""
+    name  = product["name"]
+    price = product["price"]
+    cat   = product.get("category", "produk")
+    hook  = script["hook"]
+    sol   = script["solution"][:120]
+
+    return (
+        f"Vertical TikTok UGC video (9:16 aspect ratio) for Indonesian audience. "
+        f"An enthusiastic young Indonesian woman reviews '{name}'. "
+        f"She holds the product close to camera, smiles and speaks excitedly. "
+        f"Bright natural lighting, clean modern background. "
+        f"Text overlay shows: '{name}' and 'Rp{price:,.0f}'. "
+        f"The video feels authentic, relatable, and viral. "
+        f"Opening line (spoken in Indonesian): '{hook}'. "
+        f"She demonstrates: '{sol}'. "
+        f"End with clear product shot and satisfied expression."
+    )
+
+
+def create_video_veo3(product: dict, script: dict, voice_path: str) -> str:
+    """
+    Generate video UGC pakai Google Veo 3.
+    Fallback ke PIL + ffmpeg jika gagal.
+    """
+    if not GOOGLE_API_KEY:
+        print("  [SKIP] GOOGLE_API_KEY kosong. Fallback ke PIL.")
+        return ""
+
+    try:
+        from google import genai
+        from google.genai.types import GenerateVideoConfig
+    except ImportError:
+        print("  [ERROR] google-genai belum diinstall. Jalankan: pip install google-genai")
+        return ""
+
+    pid    = product["product_id"]
+    prompt = _build_veo3_prompt(product, script)
+    print(f"  Veo3 prompt: {prompt[:80]}...")
+    print("  Generating video dengan Google Veo 3 (bisa 1-3 menit)...")
+
+    try:
+        client    = genai.Client(api_key=GOOGLE_API_KEY)
+        operation = client.models.generate_video(
+            model  = "veo-3.0-generate-preview",
+            prompt = prompt,
+            config = GenerateVideoConfig(
+                aspect_ratio     = "9:16",
+                number_of_videos = 1,
+                duration_seconds = 8,
+            ),
+        )
+
+        # Polling sampai selesai (max 3 menit)
+        waited = 0
+        while not operation.done and waited < 180:
+            time.sleep(10)
+            waited += 10
+            print(f"  Menunggu Veo3... ({waited}s)")
+            operation = client.operations.get(operation.name)
+
+        if not operation.done:
+            print("  [TIMEOUT] Veo3 timeout. Fallback ke PIL.")
+            return ""
+
+        videos = getattr(operation.result, "generated_videos", [])
+        if not videos:
+            print("  [ERROR] Veo3 tidak menghasilkan video.")
+            return ""
+
+        # Simpan video mentah
+        raw_path = os.path.join(OUTPUT_FOLDER, f"{pid}_veo3_raw.mp4")
+        vid = videos[0].video
+
+        if getattr(vid, "video_bytes", None):
+            with open(raw_path, "wb") as f:
+                f.write(vid.video_bytes)
+        elif getattr(vid, "uri", None):
+            urllib.request.urlretrieve(vid.uri, raw_path)
+        else:
+            print("  [ERROR] Format video Veo3 tidak dikenali.")
+            return ""
+
+        size_mb = os.path.getsize(raw_path) / 1e6
+        print(f"  Video Veo3 OK: {raw_path} ({size_mb:.1f} MB)")
+
+        # Tambahkan voiceover
+        final_path = os.path.join(OUTPUT_FOLDER, f"{pid}_final.mp4")
+        if voice_path and os.path.exists(voice_path):
+            ok = run_ffmpeg([
+                "-i", raw_path,
+                "-i", voice_path,
+                "-map", "0:v:0",
+                "-map", "1:a:0",
+                "-c:v", "copy",
+                "-c:a", "aac", "-b:a", "128k",
+                "-shortest",
+                final_path,
+            ], "veo3 + voiceover")
+            if not ok:
+                shutil.copy2(raw_path, final_path)
+        else:
+            shutil.copy2(raw_path, final_path)
+
+        print(f"  Final: {final_path}")
+        return final_path
+
+    except Exception as e:
+        print(f"  [ERROR] Veo3: {e}")
+        return ""
+
+
+# =============================================================================
+# BUAT VIDEO (PIL + ffmpeg) — fallback jika tidak pakai Veo 3
 # =============================================================================
 
 def create_video(product: dict, script: dict,
@@ -1127,7 +1249,14 @@ if __name__ == "__main__":
 
             # ── 5. Buat video ─────────────────────────────────────────────────
             print("  Membuat video ...")
-            final_path = create_video(product, script, voice_path, img_paths)
+            if USE_VEO3 and GOOGLE_API_KEY:
+                print("  Mode: Google Veo 3")
+                final_path = create_video_veo3(product, script, voice_path)
+                if not final_path:
+                    print("  Veo3 gagal, fallback ke PIL + ffmpeg...")
+                    final_path = create_video(product, script, voice_path, img_paths)
+            else:
+                final_path = create_video(product, script, voice_path, img_paths)
 
         if not final_path:
             print("  [SKIP] Video tidak terbentuk.")
