@@ -82,11 +82,12 @@ AUTO_UPLOAD        = True
 HEADLESS_SCRAPE    = True             # True = scraping tanpa tampilkan browser
 HEADLESS_UPLOAD    = False            # False = tampilkan browser saat upload
 
-# MiniMax / Hailuo AI (video AI gratis — daftar di platform.minimaxi.com)
-# 1. Daftar di: https://platform.minimaxi.com
-# 2. Buat API Key → copy ke sini
-MINIMAX_API_KEY = ""       # isi API key dari MiniMax
-USE_AI_VIDEO    = False    # ganti True setelah isi MINIMAX_API_KEY
+# Kling AI (video AI gratis 66 credits/hari — daftar di platform.klingai.com)
+# 1. Daftar di: https://platform.klingai.com
+# 2. Buka Settings → API Keys → buat key → copy Access Key & Secret Key
+KLING_ACCESS_KEY = ""      # isi Access Key dari Kling
+KLING_SECRET_KEY = ""      # isi Secret Key dari Kling
+USE_AI_VIDEO     = False   # ganti True setelah isi kedua key di atas
 
 CAPTION_TEMPLATE = (
     "{hook}\n\n"
@@ -768,14 +769,13 @@ def _slide_cta(cta: str) -> "Image.Image":
 
 
 # =============================================================================
-# BUAT VIDEO PAKAI MINIMAX (HAILUO AI) — GRATIS
+# BUAT VIDEO PAKAI KLING AI — 66 CREDITS GRATIS/HARI
 # =============================================================================
 
 def _build_ai_prompt(product: dict, script: dict) -> str:
-    name  = product["name"]
-    price = product["price"]
-    hook  = script["hook"]
-    sol   = script["solution"][:120]
+    name = product["name"]
+    hook = script["hook"]
+    sol  = script["solution"][:120]
     return (
         f"Vertical TikTok UGC video 9:16. "
         f"Enthusiastic young Indonesian woman reviews '{name}'. "
@@ -786,13 +786,23 @@ def _build_ai_prompt(product: dict, script: dict) -> str:
     )
 
 
-def create_video_minimax(product: dict, script: dict, voice_path: str) -> str:
-    """
-    Generate video UGC pakai MiniMax (Hailuo AI).
-    Fallback ke PIL + ffmpeg jika gagal.
-    """
-    if not MINIMAX_API_KEY:
-        print("  [SKIP] MINIMAX_API_KEY kosong.")
+def _kling_jwt() -> str:
+    import hmac, hashlib, base64 as _b64, json as _j, time as _t
+    def _b64u(data: bytes) -> str:
+        return _b64.urlsafe_b64encode(data).rstrip(b"=").decode()
+    header  = _b64u(_j.dumps({"alg":"HS256","typ":"JWT"}, separators=(",",":")).encode())
+    now     = int(_t.time())
+    payload = _b64u(_j.dumps({"iss":KLING_ACCESS_KEY,"exp":now+1800,"nbf":now-5},
+                              separators=(",",":")).encode())
+    msg = f"{header}.{payload}".encode()
+    sig = _b64u(hmac.new(KLING_SECRET_KEY.encode(), msg, hashlib.sha256).digest())
+    return f"{header}.{payload}.{sig}"
+
+
+def create_video_kling(product: dict, script: dict, voice_path: str) -> str:
+    """Generate video UGC pakai Kling AI. Fallback ke PIL+ffmpeg jika gagal."""
+    if not KLING_ACCESS_KEY or not KLING_SECRET_KEY:
+        print("  [SKIP] KLING_ACCESS_KEY / KLING_SECRET_KEY kosong.")
         return ""
 
     import urllib.request as _ur
@@ -800,79 +810,74 @@ def create_video_minimax(product: dict, script: dict, voice_path: str) -> str:
 
     pid    = product["product_id"]
     prompt = _build_ai_prompt(product, script)
-    BASE   = "https://api.minimaxi.chat/v1"
-    HDR    = {
-        "Authorization": f"Bearer {MINIMAX_API_KEY}",
-        "Content-Type" : "application/json",
-    }
+    BASE   = "https://api.klingai.com"
 
-    print(f"  MiniMax prompt: {prompt[:80]}...")
-    print("  Generating video MiniMax (1-3 menit)...")
+    def _hdr():
+        return {
+            "Authorization": f"Bearer {_kling_jwt()}",
+            "Content-Type" : "application/json",
+        }
+
+    print(f"  Kling prompt: {prompt[:80]}...")
+    print("  Generating video Kling AI (1-3 menit)...")
 
     try:
-        import urllib.error
-
-        # Step 1: Buat task
+        # Step 1: Buat task text2video
         body = _json.dumps({
-            "model" : "video-01-live",
-            "prompt": prompt,
+            "model"        : "kling-v1",
+            "prompt"       : prompt,
+            "negative_prompt": "blurry, low quality, text overlay, watermark",
+            "cfg_scale"    : 0.5,
+            "mode"         : "std",
+            "aspect_ratio" : "9:16",
+            "duration"     : "5",
         }).encode()
-        req  = urllib.request.Request(f"{BASE}/video_generation",
-                                      data=body, headers=HDR, method="POST")
-        with urllib.request.urlopen(req, timeout=30) as r:
-            data = _json.loads(r.read())
+        req = _ur.Request(f"{BASE}/v1/videos/text2video",
+                          data=body, headers=_hdr(), method="POST")
+        with _ur.urlopen(req, timeout=30) as r:
+            resp = _json.loads(r.read())
 
-        task_id = data.get("task_id") or data.get("data", {}).get("task_id")
-        if not task_id:
-            print(f"  [ERROR] MiniMax: {data}")
+        if resp.get("code", -1) != 0:
+            print(f"  [ERROR] Kling create: {resp}")
             return ""
+
+        task_id = resp["data"]["task_id"]
         print(f"  Task ID: {task_id}")
 
-        # Step 2: Poll status
-        file_id = None
+        # Step 2: Poll status (max 5 menit)
+        video_url = ""
         for waited in range(10, 301, 10):
             time.sleep(10)
-            poll_req = urllib.request.Request(
-                f"{BASE}/query/video_generation?task_id={task_id}",
-                headers=HDR,
+            poll = _ur.Request(
+                f"{BASE}/v1/videos/text2video/{task_id}",
+                headers=_hdr(),
             )
-            with urllib.request.urlopen(poll_req, timeout=30) as r:
+            with _ur.urlopen(poll, timeout=30) as r:
                 status = _json.loads(r.read())
 
-            state = status.get("status") or status.get("data", {}).get("status", "")
+            state = status.get("data", {}).get("task_status", "")
             print(f"  Status: {state} ({waited}s)")
 
-            if state in ("Success", "Finished"):
-                file_id = (status.get("file_id")
-                           or status.get("data", {}).get("file_id"))
+            if state == "succeed":
+                videos = status["data"].get("task_result", {}).get("videos", [])
+                if videos:
+                    video_url = videos[0].get("url", "")
                 break
-            elif state in ("Failed", "Fail", "Error"):
-                print(f"  [ERROR] MiniMax gagal: {status}")
+            elif state == "failed":
+                msg = status["data"].get("task_status_msg", "")
+                print(f"  [ERROR] Kling gagal: {msg}")
                 return ""
 
-        if not file_id:
-            print("  [TIMEOUT] MiniMax timeout.")
+        if not video_url:
+            print("  [TIMEOUT] Kling timeout atau URL kosong.")
             return ""
 
-        # Step 3: Ambil URL download
-        dl_req = urllib.request.Request(
-            f"{BASE}/files/retrieve?file_id={file_id}", headers=HDR
-        )
-        with urllib.request.urlopen(dl_req, timeout=30) as r:
-            fdata = _json.loads(r.read())
-
-        download_url = (fdata.get("file", {}).get("download_url")
-                        or fdata.get("data", {}).get("download_url", ""))
-        if not download_url:
-            print(f"  [ERROR] Download URL kosong: {fdata}")
-            return ""
-
-        # Step 4: Download video
+        # Step 3: Download video
         raw_path = os.path.join(OUTPUT_FOLDER, f"{pid}_ai_raw.mp4")
         print("  Downloading video...")
-        urllib.request.urlretrieve(download_url, raw_path)
+        _ur.urlretrieve(video_url, raw_path)
 
-        # Step 5: Mix voiceover
+        # Step 4: Mix voiceover
         final_path = os.path.join(OUTPUT_FOLDER, f"{pid}_final.mp4")
         if voice_path and os.path.exists(voice_path):
             ok = run_ffmpeg([
@@ -887,11 +892,11 @@ def create_video_minimax(product: dict, script: dict, voice_path: str) -> str:
             shutil.copy2(raw_path, final_path)
 
         size_mb = os.path.getsize(final_path) / 1e6
-        print(f"  Video AI OK: {final_path} ({size_mb:.1f} MB)")
+        print(f"  Video Kling OK: {final_path} ({size_mb:.1f} MB)")
         return final_path
 
     except Exception as e:
-        print(f"  [ERROR] MiniMax: {e}")
+        print(f"  [ERROR] Kling: {e}")
         return ""
 
 
@@ -1294,11 +1299,11 @@ if __name__ == "__main__":
 
             # ── 5. Buat video ─────────────────────────────────────────────────
             print("  Membuat video ...")
-            if USE_AI_VIDEO and MINIMAX_API_KEY:
-                print("  Mode: MiniMax AI (Hailuo)")
-                final_path = create_video_minimax(product, script, voice_path)
+            if USE_AI_VIDEO and KLING_ACCESS_KEY and KLING_SECRET_KEY:
+                print("  Mode: Kling AI")
+                final_path = create_video_kling(product, script, voice_path)
                 if not final_path:
-                    print("  MiniMax gagal, fallback ke PIL + ffmpeg...")
+                    print("  Kling gagal, fallback ke PIL + ffmpeg...")
                     final_path = create_video(product, script, voice_path, img_paths)
             else:
                 final_path = create_video(product, script, voice_path, img_paths)
