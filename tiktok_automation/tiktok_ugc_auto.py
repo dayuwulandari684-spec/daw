@@ -82,10 +82,11 @@ AUTO_UPLOAD        = True
 HEADLESS_SCRAPE    = True             # True = scraping tanpa tampilkan browser
 HEADLESS_UPLOAD    = False            # False = tampilkan browser saat upload
 
-# Google Veo 3 (video AI — jauh lebih bagus dari PIL)
-# Daftar gratis di: https://aistudio.google.com → Get API Key
-GOOGLE_API_KEY = ""        # isi dengan API key dari Google AI Studio
-USE_VEO3       = False     # ganti True setelah isi GOOGLE_API_KEY
+# MiniMax / Hailuo AI (video AI gratis — daftar di platform.minimaxi.com)
+# 1. Daftar di: https://platform.minimaxi.com
+# 2. Buat API Key → copy ke sini
+MINIMAX_API_KEY = ""       # isi API key dari MiniMax
+USE_AI_VIDEO    = False    # ganti True setelah isi MINIMAX_API_KEY
 
 CAPTION_TEMPLATE = (
     "{hook}\n\n"
@@ -767,118 +768,130 @@ def _slide_cta(cta: str) -> "Image.Image":
 
 
 # =============================================================================
-# BUAT VIDEO PAKAI GOOGLE VEO 3
+# BUAT VIDEO PAKAI MINIMAX (HAILUO AI) — GRATIS
 # =============================================================================
 
-def _build_veo3_prompt(product: dict, script: dict) -> str:
-    """Buat prompt Veo 3 berdasarkan data produk."""
+def _build_ai_prompt(product: dict, script: dict) -> str:
     name  = product["name"]
     price = product["price"]
-    cat   = product.get("category", "produk")
     hook  = script["hook"]
     sol   = script["solution"][:120]
-
     return (
-        f"Vertical TikTok UGC video (9:16 aspect ratio) for Indonesian audience. "
-        f"An enthusiastic young Indonesian woman reviews '{name}'. "
-        f"She holds the product close to camera, smiles and speaks excitedly. "
-        f"Bright natural lighting, clean modern background. "
-        f"Text overlay shows: '{name}' and 'Rp{price:,.0f}'. "
-        f"The video feels authentic, relatable, and viral. "
-        f"Opening line (spoken in Indonesian): '{hook}'. "
-        f"She demonstrates: '{sol}'. "
-        f"End with clear product shot and satisfied expression."
+        f"Vertical TikTok UGC video 9:16. "
+        f"Enthusiastic young Indonesian woman reviews '{name}'. "
+        f"She holds product close to camera, smiles excitedly. "
+        f"Bright natural lighting, clean background. "
+        f"She says: '{hook}'. Shows product and says: '{sol}'. "
+        f"End with happy expression holding product. Authentic viral style."
     )
 
 
-def create_video_veo3(product: dict, script: dict, voice_path: str) -> str:
+def create_video_minimax(product: dict, script: dict, voice_path: str) -> str:
     """
-    Generate video UGC pakai Google Veo 3.
+    Generate video UGC pakai MiniMax (Hailuo AI).
     Fallback ke PIL + ffmpeg jika gagal.
     """
-    if not GOOGLE_API_KEY:
-        print("  [SKIP] GOOGLE_API_KEY kosong. Fallback ke PIL.")
+    if not MINIMAX_API_KEY:
+        print("  [SKIP] MINIMAX_API_KEY kosong.")
         return ""
 
-    try:
-        from google import genai
-    except ImportError:
-        print("  [ERROR] google-genai belum diinstall. Jalankan: pip install google-genai")
-        return ""
+    import urllib.request as _ur
+    import json as _json
 
     pid    = product["product_id"]
-    prompt = _build_veo3_prompt(product, script)
-    print(f"  Veo3 prompt: {prompt[:80]}...")
-    print("  Generating video dengan Google Veo 3 (bisa 1-3 menit)...")
+    prompt = _build_ai_prompt(product, script)
+    BASE   = "https://api.minimaxi.chat/v1"
+    HDR    = {
+        "Authorization": f"Bearer {MINIMAX_API_KEY}",
+        "Content-Type" : "application/json",
+    }
+
+    print(f"  MiniMax prompt: {prompt[:80]}...")
+    print("  Generating video MiniMax (1-3 menit)...")
 
     try:
-        client    = genai.Client(api_key=GOOGLE_API_KEY)
-        operation = client.models.generate_videos(
-            model  = "veo-2.0-generate-001",
-            prompt = prompt,
-            config = {
-                "aspect_ratio"     : "9:16",
-                "number_of_videos" : 1,
-                "duration_seconds" : 8,
-            },
-        )
+        import urllib.error
 
-        # Polling sampai selesai (max 3 menit)
-        waited = 0
-        while not operation.done and waited < 180:
+        # Step 1: Buat task
+        body = _json.dumps({
+            "model" : "video-01-live",
+            "prompt": prompt,
+        }).encode()
+        req  = urllib.request.Request(f"{BASE}/video_generation",
+                                      data=body, headers=HDR, method="POST")
+        with urllib.request.urlopen(req, timeout=30) as r:
+            data = _json.loads(r.read())
+
+        task_id = data.get("task_id") or data.get("data", {}).get("task_id")
+        if not task_id:
+            print(f"  [ERROR] MiniMax: {data}")
+            return ""
+        print(f"  Task ID: {task_id}")
+
+        # Step 2: Poll status
+        file_id = None
+        for waited in range(10, 301, 10):
             time.sleep(10)
-            waited += 10
-            print(f"  Menunggu Veo3... ({waited}s)")
-            operation = client.operations.get(operation.name)
+            poll_req = urllib.request.Request(
+                f"{BASE}/query/video_generation?task_id={task_id}",
+                headers=HDR,
+            )
+            with urllib.request.urlopen(poll_req, timeout=30) as r:
+                status = _json.loads(r.read())
 
-        if not operation.done:
-            print("  [TIMEOUT] Veo3 timeout. Fallback ke PIL.")
+            state = status.get("status") or status.get("data", {}).get("status", "")
+            print(f"  Status: {state} ({waited}s)")
+
+            if state in ("Success", "Finished"):
+                file_id = (status.get("file_id")
+                           or status.get("data", {}).get("file_id"))
+                break
+            elif state in ("Failed", "Fail", "Error"):
+                print(f"  [ERROR] MiniMax gagal: {status}")
+                return ""
+
+        if not file_id:
+            print("  [TIMEOUT] MiniMax timeout.")
             return ""
 
-        videos = getattr(operation.result, "generated_videos", [])
-        if not videos:
-            print("  [ERROR] Veo3 tidak menghasilkan video.")
+        # Step 3: Ambil URL download
+        dl_req = urllib.request.Request(
+            f"{BASE}/files/retrieve?file_id={file_id}", headers=HDR
+        )
+        with urllib.request.urlopen(dl_req, timeout=30) as r:
+            fdata = _json.loads(r.read())
+
+        download_url = (fdata.get("file", {}).get("download_url")
+                        or fdata.get("data", {}).get("download_url", ""))
+        if not download_url:
+            print(f"  [ERROR] Download URL kosong: {fdata}")
             return ""
 
-        # Simpan video mentah
-        raw_path = os.path.join(OUTPUT_FOLDER, f"{pid}_veo3_raw.mp4")
-        vid = videos[0].video
+        # Step 4: Download video
+        raw_path = os.path.join(OUTPUT_FOLDER, f"{pid}_ai_raw.mp4")
+        print("  Downloading video...")
+        urllib.request.urlretrieve(download_url, raw_path)
 
-        if getattr(vid, "video_bytes", None):
-            with open(raw_path, "wb") as f:
-                f.write(vid.video_bytes)
-        elif getattr(vid, "uri", None):
-            urllib.request.urlretrieve(vid.uri, raw_path)
-        else:
-            print("  [ERROR] Format video Veo3 tidak dikenali.")
-            return ""
-
-        size_mb = os.path.getsize(raw_path) / 1e6
-        print(f"  Video Veo3 OK: {raw_path} ({size_mb:.1f} MB)")
-
-        # Tambahkan voiceover
+        # Step 5: Mix voiceover
         final_path = os.path.join(OUTPUT_FOLDER, f"{pid}_final.mp4")
         if voice_path and os.path.exists(voice_path):
             ok = run_ffmpeg([
-                "-i", raw_path,
-                "-i", voice_path,
-                "-map", "0:v:0",
-                "-map", "1:a:0",
-                "-c:v", "copy",
-                "-c:a", "aac", "-b:a", "128k",
-                "-shortest",
-                final_path,
-            ], "veo3 + voiceover")
+                "-i", raw_path, "-i", voice_path,
+                "-map", "0:v:0", "-map", "1:a:0",
+                "-c:v", "copy", "-c:a", "aac", "-b:a", "128k",
+                "-shortest", final_path,
+            ], "mix voiceover")
             if not ok:
                 shutil.copy2(raw_path, final_path)
         else:
             shutil.copy2(raw_path, final_path)
 
-        print(f"  Final: {final_path}")
+        size_mb = os.path.getsize(final_path) / 1e6
+        print(f"  Video AI OK: {final_path} ({size_mb:.1f} MB)")
         return final_path
 
     except Exception as e:
-        print(f"  [ERROR] Veo3: {e}")
+        print(f"  [ERROR] MiniMax: {e}")
         return ""
 
 
@@ -1281,11 +1294,11 @@ if __name__ == "__main__":
 
             # ── 5. Buat video ─────────────────────────────────────────────────
             print("  Membuat video ...")
-            if USE_VEO3 and GOOGLE_API_KEY:
-                print("  Mode: Google Veo 3")
-                final_path = create_video_veo3(product, script, voice_path)
+            if USE_AI_VIDEO and MINIMAX_API_KEY:
+                print("  Mode: MiniMax AI (Hailuo)")
+                final_path = create_video_minimax(product, script, voice_path)
                 if not final_path:
-                    print("  Veo3 gagal, fallback ke PIL + ffmpeg...")
+                    print("  MiniMax gagal, fallback ke PIL + ffmpeg...")
                     final_path = create_video(product, script, voice_path, img_paths)
             else:
                 final_path = create_video(product, script, voice_path, img_paths)
