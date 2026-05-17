@@ -1351,6 +1351,9 @@ if __name__ == "__main__":
         else:
             # ── 2. Download gambar ────────────────────────────────────────────
             img_paths = download_product_images(product)
+            if not img_paths:
+                print("  [SKIP] Tidak ada foto produk — video tidak dibuat.")
+                continue
 
             # ── 3. Generate script ────────────────────────────────────────────
             script = generate_script(product)
