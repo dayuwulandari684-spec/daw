@@ -70,10 +70,10 @@ OUTPUT_FOLDER     = "output"           # folder hasil video
 FRAMES_FOLDER     = "output/frames"   # folder sementara slide PNG
 
 # Video
-VIDEO_W           = 1080
-VIDEO_H           = 1920
-FPS               = 30
-SLIDE_DURATION    = 4                  # detik per slide
+VIDEO_W           = 720
+VIDEO_H           = 1280
+FPS               = 24
+SLIDE_DURATION    = 3                  # detik per slide
 
 # Voiceover
 CONTENT_LANG      = "id"              # "id" = Bahasa Indonesia, "en" = English
@@ -212,11 +212,11 @@ def _wrap_text(text: str, font, max_w: int, draw: "ImageDraw") -> list:
 
 
 def _gradient_bg(c1: tuple, c2: tuple) -> "Image.Image":
-    data = np.zeros((VIDEO_H, VIDEO_W, 3), dtype="uint8")
-    a, b = np.array(c1), np.array(c2)
-    for row in range(VIDEO_H):
-        t = row / VIDEO_H
-        data[row] = (a * (1 - t) + b * t).astype("uint8")
+    a = np.array(c1, dtype="float32")
+    b = np.array(c2, dtype="float32")
+    t = np.linspace(0, 1, VIDEO_H, dtype="float32")[:, None]
+    data = (a * (1 - t) + b * t).astype("uint8")
+    data = np.broadcast_to(data[:, None, :], (VIDEO_H, VIDEO_W, 3)).copy()
     return Image.fromarray(data)
 
 
@@ -797,7 +797,7 @@ def _slide_product_hero(product: dict, img_path: str,
         try:
             bg = Image.open(img_path).convert("RGB")
             bg = bg.resize((VIDEO_W, VIDEO_H), Image.LANCZOS)
-            bg = bg.filter(ImageFilter.GaussianBlur(radius=20))
+            bg = bg.filter(ImageFilter.GaussianBlur(radius=10))
             dark = Image.new("RGB", bg.size, (0, 0, 0))
             blended = Image.blend(bg, dark, 0.55)
             bg.close(); del bg, dark
@@ -1004,14 +1004,7 @@ def create_video(product: dict, script: dict,
     s.save(p); s.close(); del s; gc.collect()
     slide_defs.append((p, SLIDE_DURATION + 1))
 
-    # 3. Jika ada lebih dari 1 foto, tampilkan foto ke-2 juga
-    if len(img_paths) > 1:
-        s = _slide_product_hero(product, img_paths[1], palette)
-        p = os.path.join(slides_d, "02b_product.png")
-        s.save(p); s.close(); del s; gc.collect()
-        slide_defs.append((p, SLIDE_DURATION))
-
-    # 4. Benefits — daftar keunggulan
+    # 3. Benefits — daftar keunggulan
     s = _slide_benefits(product, script)
     p = os.path.join(slides_d, "03_benefits.png")
     s.save(p); s.close(); del s; gc.collect()
