@@ -525,6 +525,48 @@ def _demo_products(keyword: str) -> list:
 # DOWNLOAD GAMBAR PRODUK
 # =============================================================================
 
+def _auto_search_image(product_name: str, pid: str) -> str:
+    """Cari foto produk otomatis di DuckDuckGo Images. Return path lokal atau ''."""
+    try:
+        from duckduckgo_search import DDGS
+    except ImportError:
+        return ""
+
+    img_dir = os.path.join("output", "images", pid)
+    os.makedirs(img_dir, exist_ok=True)
+    dest = os.path.join(img_dir, "auto_img.jpg")
+    if os.path.exists(dest):
+        print(f"  Foto (cache): {dest}")
+        return dest
+
+    print(f"  Cari foto: '{product_name}' ...")
+    try:
+        with DDGS() as ddgs:
+            results = list(ddgs.images(
+                f"{product_name} produk", max_results=5,
+                safesearch="moderate",
+            ))
+        for r in results:
+            url = r.get("image", "")
+            if not url:
+                continue
+            try:
+                req = urllib.request.Request(
+                    url, headers={"User-Agent": "Mozilla/5.0"}
+                )
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    data = resp.read()
+                img = Image.open(io.BytesIO(data)).convert("RGB")
+                img.save(dest, "JPEG")
+                print(f"  Foto auto: {dest}")
+                return dest
+            except Exception:
+                continue
+    except Exception as e:
+        print(f"  [WARN] Auto foto gagal: {e}")
+    return ""
+
+
 def download_product_images(product: dict) -> list:
     """Download/load gambar produk. Return list path PNG/JPG."""
     pid     = product["product_id"]
@@ -559,6 +601,13 @@ def download_product_images(product: dict) -> list:
             print(f"  Gambar {i+1}: {dest}")
         except Exception as e:
             print(f"  [WARN] Gambar {i+1} gagal: {e}")
+
+    # Prioritas 3: cari otomatis di DuckDuckGo Images
+    if not paths:
+        auto = _auto_search_image(product["name"], pid)
+        if auto:
+            paths.append(auto)
+
     return paths
 
 
