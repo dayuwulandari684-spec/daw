@@ -802,7 +802,6 @@ def create_video_veo3(product: dict, script: dict, voice_path: str) -> str:
 
     try:
         from google import genai
-        from google.genai.types import GenerateVideoConfig
     except ImportError:
         print("  [ERROR] google-genai belum diinstall. Jalankan: pip install google-genai")
         return ""
@@ -814,14 +813,14 @@ def create_video_veo3(product: dict, script: dict, voice_path: str) -> str:
 
     try:
         client    = genai.Client(api_key=GOOGLE_API_KEY)
-        operation = client.models.generate_video(
+        operation = client.models.generate_videos(
             model  = "veo-3.0-generate-preview",
             prompt = prompt,
-            config = GenerateVideoConfig(
-                aspect_ratio     = "9:16",
-                number_of_videos = 1,
-                duration_seconds = 8,
-            ),
+            config = {
+                "aspect_ratio"     : "9:16",
+                "number_of_videos" : 1,
+                "duration_seconds" : 8,
+            },
         )
 
         # Polling sampai selesai (max 3 menit)
