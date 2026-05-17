@@ -20,6 +20,3 @@ requests>=2.31.0
 
 # Env file
 python-dotenv>=1.0.1
-
-# Cari foto produk otomatis (tanpa API key)
-duckduckgo-search>=6.2.0

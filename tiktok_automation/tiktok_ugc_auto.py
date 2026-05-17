@@ -526,11 +526,8 @@ def _demo_products(keyword: str) -> list:
 # =============================================================================
 
 def _auto_search_image(product_name: str, pid: str) -> str:
-    """Cari foto produk otomatis di DuckDuckGo Images. Return path lokal atau ''."""
-    try:
-        from duckduckgo_search import DDGS
-    except ImportError:
-        return ""
+    """Cari foto produk di Bing Images. Return path lokal atau ''."""
+    import re as _re
 
     img_dir = os.path.join("output", "images", pid)
     os.makedirs(img_dir, exist_ok=True)
@@ -541,23 +538,30 @@ def _auto_search_image(product_name: str, pid: str) -> str:
 
     print(f"  Cari foto: '{product_name}' ...")
     try:
-        with DDGS() as ddgs:
-            results = list(ddgs.images(
-                f"{product_name} produk", max_results=5,
-                safesearch="moderate",
-            ))
-        for r in results:
-            url = r.get("image", "")
-            if not url:
-                continue
+        query = urllib.parse.quote_plus(product_name)
+        url   = f"https://www.bing.com/images/search?q={query}&form=HDRSC2&first=1"
+        hdrs  = {
+            "User-Agent"     : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                               "AppleWebKit/537.36 (KHTML, like Gecko) "
+                               "Chrome/124.0.0.0 Safari/537.36",
+            "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8",
+        }
+        req = urllib.request.Request(url, headers=hdrs)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            html = resp.read().decode("utf-8", errors="ignore")
+
+        # Bing menyimpan URL asli gambar di field "murl"
+        img_urls = _re.findall(r'"murl":"(https?://[^"]+)"', html)
+
+        for img_url in img_urls[:8]:
             try:
-                req = urllib.request.Request(
-                    url, headers={"User-Agent": "Mozilla/5.0"}
+                ireq = urllib.request.Request(
+                    img_url, headers={"User-Agent": "Mozilla/5.0"}
                 )
-                with urllib.request.urlopen(req, timeout=8) as resp:
-                    data = resp.read()
-                img = Image.open(io.BytesIO(data)).convert("RGB")
-                img.save(dest, "JPEG")
+                with urllib.request.urlopen(ireq, timeout=8) as ir:
+                    data = ir.read()
+                pil_img = Image.open(io.BytesIO(data)).convert("RGB")
+                pil_img.save(dest, "JPEG")
                 print(f"  Foto auto: {dest}")
                 return dest
             except Exception:
