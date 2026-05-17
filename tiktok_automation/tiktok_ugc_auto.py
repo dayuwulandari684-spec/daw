@@ -70,10 +70,10 @@ OUTPUT_FOLDER     = "output"           # folder hasil video
 FRAMES_FOLDER     = "output/frames"   # folder sementara slide PNG
 
 # Video
-VIDEO_W           = 720
-VIDEO_H           = 1280
-FPS               = 24
-SLIDE_DURATION    = 3                  # detik per slide
+VIDEO_W           = 1080
+VIDEO_H           = 1920
+FPS               = 30
+SLIDE_DURATION    = 4                  # detik per slide
 
 # Voiceover
 CONTENT_LANG      = "id"              # "id" = Bahasa Indonesia, "en" = English
@@ -1274,6 +1274,7 @@ def upload_to_tiktok(video_path: str, caption: str) -> bool:
 # =============================================================================
 
 if __name__ == "__main__":
+  try:
     print("=" * 55)
     print("  TikTok UGC Automation")
     print(f"  Keyword    : {KEYWORD}")
@@ -1338,3 +1339,11 @@ if __name__ == "__main__":
     print(f"  Selesai! {processed}/{len(products)} produk diproses.")
     print(f"  Output: {os.path.abspath(OUTPUT_FOLDER)}")
     print("=" * 55)
+  except Exception as _err:
+    import traceback
+    print("\n" + "!" * 55)
+    print("  SCRIPT CRASH — salin error di bawah ini ke chat:")
+    print("!" * 55)
+    traceback.print_exc()
+  finally:
+    input("\nTekan Enter untuk keluar...")
