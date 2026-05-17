@@ -1320,9 +1320,6 @@ if __name__ == "__main__":
             if USE_AI_VIDEO and KLING_ACCESS_KEY and KLING_SECRET_KEY:
                 print("  Mode: Kling AI")
                 final_path = create_video_kling(product, script, voice_path)
-                if not final_path:
-                    print("  Kling gagal, fallback ke PIL + ffmpeg...")
-                    final_path = create_video(product, script, voice_path, img_paths)
             else:
                 final_path = create_video(product, script, voice_path, img_paths)
 
