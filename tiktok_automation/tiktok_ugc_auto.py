@@ -34,6 +34,35 @@ MAX_PRODUCTS      = 2                  # jumlah produk yang diproses per run
 SHUFFLE           = True               # acak urutan produk hasil scraping
 SEARCH_SCROLL     = 3                  # berapa kali scroll saat scraping
 
+# Kalau scraping sering crash/force quit, set True → pakai data di PRODUK_MANUAL
+SKIP_SCRAPING     = True
+
+# Isi produk sendiri di sini (aktif kalau SKIP_SCRAPING = True)
+PRODUK_MANUAL = [
+    {
+        "product_id" : "manual_001",
+        "name"       : "Serum Vitamin C Glowing 30ml",
+        "price"      : 89_000,
+        "rating"     : 4.8,
+        "sold_count" : 15_420,
+        "image_urls" : [],            # kosongkan, atau isi URL gambar produk
+        "category"   : "skincare",
+        "url"        : "",
+        "description": "Cerahkan kulit dalam 7 hari. BPOM certified.",
+    },
+    {
+        "product_id" : "manual_002",
+        "name"       : "Sunscreen SPF50 PA++++ 50ml",
+        "price"      : 65_000,
+        "rating"     : 4.7,
+        "sold_count" : 8_930,
+        "image_urls" : [],
+        "category"   : "skincare",
+        "url"        : "",
+        "description": "Ringan, tidak lengket, cocok kulit berminyak.",
+    },
+]
+
 OUTPUT_FOLDER     = "output"           # folder hasil video
 FRAMES_FOLDER     = "output/frames"   # folder sementara slide PNG
 
@@ -218,6 +247,10 @@ def scrape_products(keyword: str, max_n: int = MAX_PRODUCTS) -> list:
     Return: list of dict produk.
     """
     print(f"Scraping TikTok Shop: '{keyword}' ...")
+
+    if SKIP_SCRAPING:
+        print("  SKIP_SCRAPING = True, pakai PRODUK_MANUAL.\n")
+        return PRODUK_MANUAL[:max_n]
 
     if not PW_OK:
         print("  Playwright tidak tersedia, pakai data demo.\n")
