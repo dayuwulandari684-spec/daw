@@ -814,7 +814,7 @@ def create_video_veo3(product: dict, script: dict, voice_path: str) -> str:
     try:
         client    = genai.Client(api_key=GOOGLE_API_KEY)
         operation = client.models.generate_videos(
-            model  = "veo-3.0-generate-preview",
+            model  = "veo-2.0-generate-001",
             prompt = prompt,
             config = {
                 "aspect_ratio"     : "9:16",
