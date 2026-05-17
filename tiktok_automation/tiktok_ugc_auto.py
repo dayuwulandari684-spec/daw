@@ -789,100 +789,55 @@ def _slide_hook(hook: str, emoji: str, palette: list) -> "Image.Image":
 
 def _slide_product_hero(product: dict, img_path: str,
                         palette: list) -> "Image.Image":
-    """Slide 2: foto produk besar + info card — tampilan utama."""
-    has_img = img_path and os.path.exists(img_path)
+    """Slide 2: foto produk + info — RGB only, tanpa blur/RGBA."""
+    # Canvas RGB — tidak ada RGBA sama sekali
+    canvas = _gradient_bg(*palette)
+    draw   = ImageDraw.Draw(canvas)
 
-    # ── Background ─────────────────────────────────────────────────────────────
-    if has_img:
+    img_bottom = 80
+    if img_path and os.path.exists(img_path):
         try:
-            bg = Image.open(img_path).convert("RGB")
-            bg = bg.resize((VIDEO_W, VIDEO_H), Image.LANCZOS)
-            bg = bg.filter(ImageFilter.GaussianBlur(radius=10))
-            dark = Image.new("RGB", bg.size, (0, 0, 0))
-            blended = Image.blend(bg, dark, 0.55)
-            bg.close(); del bg, dark
-            canvas = blended.convert("RGBA")
-            blended.close(); del blended
-        except Exception:
-            canvas = _gradient_bg(*palette).convert("RGBA")
-    else:
-        canvas = _gradient_bg(*palette).convert("RGBA")
-
-    # ── Foto produk centered ────────────────────────────────────────────────────
-    img_bottom = 180
-    if has_img:
-        try:
-            prod = Image.open(img_path).convert("RGBA")
-            prod.thumbnail((int(VIDEO_W * 0.72), int(VIDEO_H * 0.44)), Image.LANCZOS)
-
-            pad   = 18
-            frame = Image.new("RGBA",
-                              (prod.width + pad * 2, prod.height + pad * 2),
-                              (0, 0, 0, 0))
-            fd = ImageDraw.Draw(frame)
-            fd.rounded_rectangle([0, 0, frame.width - 1, frame.height - 1],
-                                  radius=28, fill=(255, 255, 255, 230))
-            frame.paste(prod, (pad, pad), prod)
+            prod = Image.open(img_path).convert("RGB")
+            prod.thumbnail((int(VIDEO_W * 0.78), int(VIDEO_H * 0.46)), Image.LANCZOS)
+            pad = 10
+            # Bingkai putih: gambar rectangle dulu, paste foto di atasnya
+            x = (VIDEO_W - prod.width) // 2
+            y = 70
+            draw.rectangle([x - pad, y - pad,
+                            x + prod.width + pad, y + prod.height + pad],
+                           fill=(255, 255, 255))
+            canvas.paste(prod, (x, y))
+            img_bottom = y + prod.height + pad + 24
             prod.close(); del prod
-
-            x = (VIDEO_W - frame.width) // 2
-            y = 110
-            canvas.paste(frame, (x, y), frame)
-            img_bottom = y + frame.height + 30
-            frame.close(); del frame
         except Exception:
             pass
 
-    # ── Info card bawah ─────────────────────────────────────────────────────────
-    card_top = max(img_bottom, int(VIDEO_H * 0.57))
-    card     = Image.new("RGBA", (VIDEO_W, VIDEO_H), (0, 0, 0, 0))
-    cd       = ImageDraw.Draw(card)
-    cd.rounded_rectangle([28, card_top, VIDEO_W - 28, VIDEO_H - 28],
-                          radius=44, fill=(12, 12, 24, 218))
-    merged = Image.alpha_composite(canvas, card)
-    canvas.close(); card.close(); del canvas, card
-    canvas = merged; del merged
-    draw   = ImageDraw.Draw(canvas)
+    # Info card: rectangle gelap (RGB — tidak perlu alpha)
+    card_top = max(img_bottom, int(VIDEO_H * 0.56))
+    draw.rectangle([0, card_top, VIDEO_W, VIDEO_H], fill=(12, 12, 24))
 
-    fn   = _get_font(54)
-    fp   = _get_font(80)
-    fsm  = _get_font(42)
+    fn  = _get_font(46)
+    fp  = _get_font(66)
+    fsm = _get_font(36)
 
-    y = card_top + 46
-    name_lines = _wrap_text(product["name"], fn, VIDEO_W - 120, draw)[:2]
-    for line in name_lines:
+    y = card_top + 30
+    for line in _wrap_text(product["name"], fn, VIDEO_W - 60, draw)[:2]:
         bb = draw.textbbox((0, 0), line, font=fn)
-        draw.text(((VIDEO_W - (bb[2] - bb[0])) // 2, y),
-                  line, font=fn, fill="white")
-        y += (bb[3] - bb[1]) + 12
+        draw.text(((VIDEO_W - (bb[2] - bb[0])) // 2, y), line, font=fn, fill="white")
+        y += (bb[3] - bb[1]) + 10
 
-    # Harga
-    y += 16
+    y += 12
     price_txt = f"Rp{product['price']:,.0f}"
-    pb  = draw.textbbox((0, 0), price_txt, font=fp)
-    px  = (VIDEO_W - (pb[2] - pb[0])) // 2
-    draw.text((px + 3, y + 3), price_txt, font=fp, fill=(0, 0, 0, 100))
-    draw.text((px, y), price_txt, font=fp, fill="#FF6235")
-    y += (pb[3] - pb[1]) + 22
+    pb = draw.textbbox((0, 0), price_txt, font=fp)
+    draw.text(((VIDEO_W - (pb[2] - pb[0])) // 2, y), price_txt, font=fp, fill="#FF6235")
+    y += (pb[3] - pb[1]) + 14
 
-    # Rating + sold
     stars = "★" * int(product["rating"]) + "☆" * (5 - int(product["rating"]))
-    info  = f"{stars}  {product['rating']}  |  {product['sold_count']:,}+ terjual"
-    ib    = draw.textbbox((0, 0), info, font=fsm)
-    draw.text(((VIDEO_W - (ib[2] - ib[0])) // 2, y),
-              info, font=fsm, fill="#FFD700")
+    info  = f"{stars} {product['rating']}  |  {product['sold_count']:,}+ terjual"
+    ib = draw.textbbox((0, 0), info, font=fsm)
+    draw.text(((VIDEO_W - (ib[2] - ib[0])) // 2, y), info, font=fsm, fill="#FFD700")
 
-    # Badge BEST SELLER pojok kanan atas
-    c1, _ = palette
-    bf    = _get_font(38)
-    badge = "🔥 BEST SELLER"
-    bb    = draw.textbbox((0, 0), badge, font=bf)
-    bw, bh = (bb[2] - bb[0]) + 36, (bb[3] - bb[1]) + 20
-    draw.rounded_rectangle([VIDEO_W - bw - 28, 55, VIDEO_W - 28, 55 + bh],
-                            radius=bh // 2, fill=(c1[0], min(c1[1] + 40, 255), 30, 240))
-    draw.text((VIDEO_W - bw - 10, 65), badge, font=bf, fill="white")
-
-    return canvas.convert("RGB")
+    return canvas
 
 
 def _slide_benefits(product: dict, script: dict) -> "Image.Image":
