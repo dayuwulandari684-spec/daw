@@ -1344,27 +1344,24 @@ if __name__ == "__main__":
             f"Terjual: {product['sold_count']:,}"
         )
 
-        final_path = os.path.join(OUTPUT_FOLDER, f"{pid}_final.mp4")
+        final_path = ""
 
-        if os.path.exists(final_path):
-            print(f"  Video sudah ada ({final_path}), skip generate.")
-        else:
-            # ── 2. Download gambar ────────────────────────────────────────────
-            img_paths = download_product_images(product)
-            if not img_paths:
-                print("  [SKIP] Tidak ada foto produk — video tidak dibuat.")
-                continue
+        # ── 2. Download gambar ────────────────────────────────────────────────
+        img_paths = download_product_images(product)
+        if not img_paths:
+            print("  [SKIP] Tidak ada foto produk — video tidak dibuat.")
+            continue
 
-            # ── 3. Generate script ────────────────────────────────────────────
-            script = generate_script(product)
-            print(f"  Hook: {script['hook'][:65]}...")
+        # ── 3. Generate script ────────────────────────────────────────────────
+        script = generate_script(product)
+        print(f"  Hook: {script['hook'][:65]}...")
 
-            # ── 4. Voiceover ──────────────────────────────────────────────────
-            voice_path = generate_voiceover(script["voiceover"], pid)
+        # ── 4. Voiceover ──────────────────────────────────────────────────────
+        voice_path = generate_voiceover(script["voiceover"], pid)
 
-            # ── 5. Buat video ─────────────────────────────────────────────────
-            print("  Membuat video ...")
-            final_path = create_video(product, script, voice_path, img_paths)
+        # ── 5. Buat video ─────────────────────────────────────────────────────
+        print("  Membuat video ...")
+        final_path = create_video(product, script, voice_path, img_paths)
 
         if not final_path:
             print("  [SKIP] Video tidak terbentuk.")
