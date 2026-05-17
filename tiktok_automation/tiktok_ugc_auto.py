@@ -45,7 +45,8 @@ PRODUK_MANUAL = [
         "price"      : 89_000,
         "rating"     : 4.8,
         "sold_count" : 15_420,
-        "image_urls" : [],            # kosongkan, atau isi URL gambar produk
+        "image_urls" : [],
+        "image_path" : "",   # ← path foto produk lokal, contoh: r"C:\foto\serum.jpg"
         "category"   : "skincare",
         "url"        : "",
         "description": "Cerahkan kulit dalam 7 hari. BPOM certified.",
@@ -57,6 +58,7 @@ PRODUK_MANUAL = [
         "rating"     : 4.7,
         "sold_count" : 8_930,
         "image_urls" : [],
+        "image_path" : "",   # ← path foto produk lokal, contoh: r"C:\foto\sunscreen.jpg"
         "category"   : "skincare",
         "url"        : "",
         "description": "Ringan, tidak lengket, cocok kulit berminyak.",
@@ -82,12 +84,6 @@ AUTO_UPLOAD        = True
 HEADLESS_SCRAPE    = True             # True = scraping tanpa tampilkan browser
 HEADLESS_UPLOAD    = False            # False = tampilkan browser saat upload
 
-# Kling AI (video AI gratis 66 credits/hari — daftar di platform.klingai.com)
-# 1. Daftar di: https://platform.klingai.com
-# 2. Buka Settings → API Keys → buat key → copy Access Key & Secret Key
-KLING_ACCESS_KEY = ""      # isi Access Key dari Kling
-KLING_SECRET_KEY = ""      # isi Secret Key dari Kling
-USE_AI_VIDEO     = False   # ganti True setelah isi kedua key di atas
 
 CAPTION_TEMPLATE = (
     "{hook}\n\n"
@@ -115,7 +111,7 @@ for _d in [OUTPUT_FOLDER, FRAMES_FOLDER, "output/images"]:
 # =============================================================================
 
 try:
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import Image, ImageDraw, ImageFont, ImageFilter
     import numpy as np
     PIL_OK = True
 except ImportError:
@@ -221,6 +217,26 @@ def _gradient_bg(c1: tuple, c2: tuple) -> "Image.Image":
         t = row / VIDEO_H
         data[row] = (a * (1 - t) + b * t).astype("uint8")
     return Image.fromarray(data)
+
+
+def _shadow_text(draw, x: int, y: int, text: str, font, fill="white") -> None:
+    """Teks dengan shadow 8-arah supaya terbaca di atas background apapun."""
+    for ox, oy in [(-4,-4),(4,-4),(-4,4),(4,4),(0,-5),(0,5),(-5,0),(5,0)]:
+        draw.text((x + ox, y + oy), text, font=font, fill=(0, 0, 0, 160))
+    draw.text((x, y), text, font=font, fill=fill)
+
+
+def _center_shadow(draw, y: int, text: str, font,
+                   fill="white", max_w: int = None) -> int:
+    """Gambar teks shadow di tengah. Return Y setelah teks."""
+    mw    = max_w or (VIDEO_W - 100)
+    lines = _wrap_text(text, font, mw, draw)
+    for line in lines:
+        bb = draw.textbbox((0, 0), line, font=font)
+        x  = (VIDEO_W - (bb[2] - bb[0])) // 2
+        _shadow_text(draw, x, y, line, font, fill)
+        y += (bb[3] - bb[1]) + 18
+    return y
 
 
 def _parse_price(raw) -> float:
@@ -510,12 +526,20 @@ def _demo_products(keyword: str) -> list:
 # =============================================================================
 
 def download_product_images(product: dict) -> list:
-    """Download gambar produk ke lokal. Return list path PNG/JPG."""
+    """Download/load gambar produk. Return list path PNG/JPG."""
     pid     = product["product_id"]
     img_dir = os.path.join("output", "images", pid)
     os.makedirs(img_dir, exist_ok=True)
 
     paths = []
+
+    # Prioritas 1: image_path lokal (foto dari PC user)
+    local = product.get("image_path", "").strip()
+    if local and os.path.exists(local):
+        print(f"  Gambar lokal: {local}")
+        return [local]
+
+    # Prioritas 2: download dari image_urls (hasil scraping)
     for i, url in enumerate(product.get("image_urls", [])[:3]):
         if not url:
             continue
@@ -671,255 +695,222 @@ def generate_voiceover(text: str, filename: str) -> str:
 # BUAT SLIDE PNG (PIL)
 # =============================================================================
 
-def _slide_text(text: str, palette: list,
-                emoji: str = "", font_size: int = 65) -> "Image.Image":
-    img  = _gradient_bg(*palette)
+def _slide_hook(hook: str, emoji: str, palette: list) -> "Image.Image":
+    """Slide 1: hook dramatis — gradient gelap + emoji besar + teks bold."""
+    c1, c2 = palette
+    # Gelap-kan warna palette untuk kesan dramatis
+    dark1 = tuple(max(0, v - 80) for v in c1)
+    dark2 = tuple(max(0, v - 60) for v in c2)
+    img  = _gradient_bg(dark1, dark2)
     draw = ImageDraw.Draw(img)
-    font = _get_font(font_size)
 
-    if emoji:
-        ef = _get_font(160)
-        eb = draw.textbbox((0, 0), emoji, font=ef)
-        ew = eb[2] - eb[0]
-        draw.text(((VIDEO_W - ew) // 2, 140), emoji, font=ef, fill=(255, 255, 255))
+    # Garis aksen atas
+    draw.rectangle([0, 0, VIDEO_W, 12], fill=c1)
 
-    lines   = _wrap_text(text, font, VIDEO_W - 120, draw)
-    total_h = len(lines) * (font_size + 18)
-    y       = (VIDEO_H - total_h) // 2 + (80 if emoji else 0)
+    # Emoji besar
+    ef = _get_font(200)
+    eb = draw.textbbox((0, 0), emoji, font=ef)
+    draw.text(((VIDEO_W - (eb[2] - eb[0])) // 2, 220), emoji, font=ef,
+              fill=(255, 255, 255))
 
-    for line in lines:
-        bb = draw.textbbox((0, 0), line, font=font)
-        tw = bb[2] - bb[0]
-        x  = (VIDEO_W - tw) // 2
-        draw.text((x + 3, y + 3), line, fill=(0, 0, 0, 100), font=font)
-        draw.text((x,     y),     line, fill=(255, 255, 255), font=font)
-        y += font_size + 18
+    # Hook text
+    font = _get_font(74)
+    y = _center_shadow(draw, 640, hook, font, fill="white")
 
+    # Tag "UGC Review" di bawah
+    tag_font = _get_font(40)
+    tag = "✨ UGC Review ✨"
+    tb  = draw.textbbox((0, 0), tag, font=tag_font)
+    draw.rounded_rectangle(
+        [(VIDEO_W - (tb[2] - tb[0]) - 60) // 2, y + 60,
+         (VIDEO_W + (tb[2] - tb[0]) + 60) // 2, y + 130],
+        radius=35, fill=(255, 255, 255, 40),
+    )
+    _center_shadow(draw, y + 70, tag, tag_font, fill=(255, 255, 200))
+
+    # Garis aksen bawah
+    draw.rectangle([0, VIDEO_H - 12, VIDEO_W, VIDEO_H], fill=c2)
     return img
 
 
-def _slide_product(product: dict, img_path: str, palette: list) -> "Image.Image":
-    canvas = _gradient_bg(*palette)
+def _slide_product_hero(product: dict, img_path: str,
+                        palette: list) -> "Image.Image":
+    """Slide 2: foto produk besar + info card — tampilan utama."""
+    has_img = img_path and os.path.exists(img_path)
 
-    text_y = VIDEO_H // 2 - 200
-    if img_path and os.path.exists(img_path):
+    # ── Background ─────────────────────────────────────────────────────────────
+    if has_img:
         try:
-            prod_img = Image.open(img_path).convert("RGBA")
-            prod_img.thumbnail(
-                (int(VIDEO_W * 0.85), int(VIDEO_H * 0.52)), Image.LANCZOS
-            )
-            x = (VIDEO_W - prod_img.width) // 2
-            canvas.paste(prod_img, (x, 80),
-                         prod_img if prod_img.mode == "RGBA" else None)
-            text_y = 80 + prod_img.height + 40
+            bg = Image.open(img_path).convert("RGB")
+            bg = bg.resize((VIDEO_W, VIDEO_H), Image.LANCZOS)
+            bg = bg.filter(ImageFilter.GaussianBlur(radius=28))
+            dark = Image.new("RGB", bg.size, (0, 0, 0))
+            canvas = Image.blend(bg, dark, 0.55).convert("RGBA")
+        except Exception:
+            canvas = _gradient_bg(*palette).convert("RGBA")
+    else:
+        canvas = _gradient_bg(*palette).convert("RGBA")
+
+    # ── Foto produk centered ────────────────────────────────────────────────────
+    img_bottom = 180
+    if has_img:
+        try:
+            prod = Image.open(img_path).convert("RGBA")
+            prod.thumbnail((int(VIDEO_W * 0.75), int(VIDEO_H * 0.46)), Image.LANCZOS)
+
+            # Bingkai putih rounded di belakang foto
+            pad  = 18
+            frame = Image.new("RGBA",
+                              (prod.width + pad * 2, prod.height + pad * 2),
+                              (0, 0, 0, 0))
+            fd = ImageDraw.Draw(frame)
+            fd.rounded_rectangle([0, 0, frame.width - 1, frame.height - 1],
+                                  radius=28, fill=(255, 255, 255, 230))
+            frame.paste(prod, (pad, pad), prod)
+
+            x = (VIDEO_W - frame.width) // 2
+            y = 110
+            canvas.paste(frame, (x, y), frame)
+            img_bottom = y + frame.height + 30
         except Exception:
             pass
 
-    draw = ImageDraw.Draw(canvas)
-    big  = _get_font(55)
-    med  = _get_font(44)
+    # ── Info card bawah ─────────────────────────────────────────────────────────
+    card_top = max(img_bottom, int(VIDEO_H * 0.57))
+    card     = Image.new("RGBA", (VIDEO_W, VIDEO_H), (0, 0, 0, 0))
+    cd       = ImageDraw.Draw(card)
+    cd.rounded_rectangle([28, card_top, VIDEO_W - 28, VIDEO_H - 28],
+                          radius=44, fill=(12, 12, 24, 218))
+    canvas = Image.alpha_composite(canvas, card)
+    draw   = ImageDraw.Draw(canvas)
 
-    for line in _wrap_text(product["name"], big, VIDEO_W - 80, draw)[:2]:
-        bb = draw.textbbox((0, 0), line, font=big)
-        tw = bb[2] - bb[0]
-        draw.text(((VIDEO_W - tw) // 2, text_y), line, fill="white", font=big)
-        text_y += 68
+    fn   = _get_font(54)
+    fp   = _get_font(80)
+    fsm  = _get_font(42)
 
-    draw.text((80, text_y + 10),
-              f"Rp{product['price']:,.0f}", fill="#FFD700", font=big)
-    draw.text((80, text_y + 82),
-              f"⭐ {product['rating']}  |  {product['sold_count']:,}+ terjual",
-              fill="white", font=med)
-    return canvas
+    y = card_top + 46
+    name_lines = _wrap_text(product["name"], fn, VIDEO_W - 120, draw)[:2]
+    for line in name_lines:
+        bb = draw.textbbox((0, 0), line, font=fn)
+        draw.text(((VIDEO_W - (bb[2] - bb[0])) // 2, y),
+                  line, font=fn, fill="white")
+        y += (bb[3] - bb[1]) + 12
+
+    # Harga
+    y += 16
+    price_txt = f"Rp{product['price']:,.0f}"
+    pb  = draw.textbbox((0, 0), price_txt, font=fp)
+    px  = (VIDEO_W - (pb[2] - pb[0])) // 2
+    draw.text((px + 3, y + 3), price_txt, font=fp, fill=(0, 0, 0, 100))
+    draw.text((px, y), price_txt, font=fp, fill="#FF6235")
+    y += (pb[3] - pb[1]) + 22
+
+    # Rating + sold
+    stars = "★" * int(product["rating"]) + "☆" * (5 - int(product["rating"]))
+    info  = f"{stars}  {product['rating']}  |  {product['sold_count']:,}+ terjual"
+    ib    = draw.textbbox((0, 0), info, font=fsm)
+    draw.text(((VIDEO_W - (ib[2] - ib[0])) // 2, y),
+              info, font=fsm, fill="#FFD700")
+
+    # Badge BEST SELLER pojok kanan atas
+    c1, _ = palette
+    bf    = _get_font(38)
+    badge = "🔥 BEST SELLER"
+    bb    = draw.textbbox((0, 0), badge, font=bf)
+    bw, bh = (bb[2] - bb[0]) + 36, (bb[3] - bb[1]) + 20
+    draw.rounded_rectangle([VIDEO_W - bw - 28, 55, VIDEO_W - 28, 55 + bh],
+                            radius=bh // 2, fill=(c1[0], min(c1[1] + 40, 255), 30, 240))
+    draw.text((VIDEO_W - bw - 10, 65), badge, font=bf, fill="white")
+
+    return canvas.convert("RGB")
 
 
-def _slide_cta(cta: str) -> "Image.Image":
-    img  = _gradient_bg((255, 69, 0), (220, 20, 60))
+def _slide_benefits(product: dict, script: dict) -> "Image.Image":
+    """Slide 3: daftar keunggulan produk."""
+    img  = _gradient_bg((14, 20, 48), (28, 45, 90))
     draw = ImageDraw.Draw(img)
-    big  = _get_font(72)
-    med  = _get_font(52)
 
-    ikon = _get_font(200)
-    ib   = draw.textbbox((0, 0), "🛒", font=ikon)
-    draw.text(((VIDEO_W - (ib[2] - ib[0])) // 2, 160),
-              "🛒", font=ikon, fill="#FFD700")
+    # Header
+    fh  = _get_font(60)
+    fi  = _get_font(50)
+    fsm = _get_font(40)
 
-    lines = _wrap_text(cta, big, VIDEO_W - 100, draw)
-    y = 580
-    for line in lines:
-        bb = draw.textbbox((0, 0), line, font=big)
-        tw = bb[2] - bb[0]
-        draw.text(((VIDEO_W - tw) // 2 + 3, y + 3), line,
-                  fill=(0, 0, 0, 80), font=big)
-        draw.text(((VIDEO_W - tw) // 2,     y),     line,
-                  fill="white",       font=big)
-        y += 92
+    y = _center_shadow(draw, 160, "Kenapa wajib coba? 🤔", fh, fill="white")
 
-    btn_y = y + 60
-    draw.rounded_rectangle(
-        [120, btn_y, VIDEO_W - 120, btn_y + 160], radius=40, fill="#FFD700"
-    )
-    btn_text = "TAP KERANJANG DI BAWAH ⬇"
-    bb = draw.textbbox((0, 0), btn_text, font=med)
-    draw.text(
-        ((VIDEO_W - (bb[2] - bb[0])) // 2, btn_y + 55),
-        btn_text, fill="#1A1A1A", font=med,
-    )
+    # Garis pemisah
+    draw.rectangle([80, y + 20, VIDEO_W - 80, y + 26],
+                   fill=(255, 255, 255, 80))
+    y += 70
+
+    # Daftar benefit
+    items = []
+    if product.get("description"):
+        items.append(f"  {product['description'][:65]}")
+    items.append(f"  Rating bintang {product['rating']}/5")
+    items.append(f"  {product['sold_count']:,}+ pembeli sudah puas")
+    items.append(f"  Harga terjangkau Rp{product['price']:,.0f}")
+
+    icons = ["✅", "⭐", "👥", "💰"]
+    for icon, item in zip(icons, items[:4]):
+        full = icon + item
+        lines = _wrap_text(full, fi, VIDEO_W - 100, draw)
+        for j, line in enumerate(lines[:2]):
+            _shadow_text(draw, 60, y, line, fi, fill="white")
+            bb = draw.textbbox((0, 0), line, font=fi)
+            y += (bb[3] - bb[1]) + 12
+        y += 28
+
+    # Footer
+    _center_shadow(draw, VIDEO_H - 200, "Swipe untuk lihat lebih →", fsm,
+                   fill=(200, 200, 255))
     return img
 
 
-# =============================================================================
-# BUAT VIDEO PAKAI KLING AI — 66 CREDITS GRATIS/HARI
-# =============================================================================
+def _slide_cta(product: dict, cta: str) -> "Image.Image":
+    """Slide 4: CTA dengan harga + tombol bold."""
+    img  = _gradient_bg((200, 30, 10), (140, 10, 50))
+    draw = ImageDraw.Draw(img)
 
-def _build_ai_prompt(product: dict, script: dict) -> str:
-    name = product["name"]
-    hook = script["hook"]
-    sol  = script["solution"][:120]
-    return (
-        f"Vertical TikTok UGC video 9:16. "
-        f"Enthusiastic young Indonesian woman reviews '{name}'. "
-        f"She holds product close to camera, smiles excitedly. "
-        f"Bright natural lighting, clean background. "
-        f"She says: '{hook}'. Shows product and says: '{sol}'. "
-        f"End with happy expression holding product. Authentic viral style."
-    )
+    # Ikon keranjang
+    ik = _get_font(220)
+    ib = draw.textbbox((0, 0), "🛒", font=ik)
+    draw.text(((VIDEO_W - (ib[2] - ib[0])) // 2, 130),
+              "🛒", font=ik, fill="#FFD700")
+
+    # Harga di atas CTA
+    fp = _get_font(82)
+    y  = 520
+    pb = draw.textbbox((0, 0), f"Rp{product['price']:,.0f}", font=fp)
+    draw.text(((VIDEO_W - (pb[2] - pb[0])) // 2, y),
+              f"Rp{product['price']:,.0f}", font=fp, fill="#FFD700")
+    y += (pb[3] - pb[1]) + 30
+
+    # Teks CTA
+    fc = _get_font(64)
+    y  = _center_shadow(draw, y, cta, fc, fill="white")
+
+    # Tombol
+    btn_font = _get_font(52)
+    btn_txt  = "TAP KERANJANG DI BAWAH ⬇"
+    bb       = draw.textbbox((0, 0), btn_txt, font=btn_font)
+    bw       = bb[2] - bb[0]
+    btn_x    = (VIDEO_W - bw - 80) // 2
+    btn_y    = y + 60
+    draw.rounded_rectangle([btn_x, btn_y, btn_x + bw + 80, btn_y + 130],
+                            radius=40, fill="#FFD700")
+    draw.text((btn_x + 40, btn_y + 32), btn_txt, font=btn_font, fill="#1A0A00")
+
+    # Urgency text
+    fu = _get_font(42)
+    _center_shadow(draw, btn_y + 170, "⚡ Stok terbatas — jangan sampai kehabisan!",
+                   fu, fill=(255, 220, 180))
+    return img
 
 
-def _kling_jwt() -> str:
-    import hmac, hashlib, base64 as _b64, json as _j, time as _t
-    def _b64u(data: bytes) -> str:
-        return _b64.urlsafe_b64encode(data).rstrip(b"=").decode()
-    header  = _b64u(_j.dumps({"alg":"HS256","typ":"JWT"}, separators=(",",":")).encode())
-    now     = int(_t.time())
-    payload = _b64u(_j.dumps({"iss":KLING_ACCESS_KEY,"exp":now+1800,"nbf":now-5},
-                              separators=(",",":")).encode())
-    msg = f"{header}.{payload}".encode()
-    sig = _b64u(hmac.new(KLING_SECRET_KEY.encode(), msg, hashlib.sha256).digest())
-    return f"{header}.{payload}.{sig}"
-
-
-def create_video_kling(product: dict, script: dict, voice_path: str) -> str:
-    """Generate video UGC pakai Kling AI. Fallback ke PIL+ffmpeg jika gagal."""
-    if not KLING_ACCESS_KEY or not KLING_SECRET_KEY:
-        print("  [SKIP] KLING_ACCESS_KEY / KLING_SECRET_KEY kosong.")
-        return ""
-
-    import urllib.request as _ur
-    import json as _json
-
-    pid    = product["product_id"]
-    prompt = _build_ai_prompt(product, script)
-    BASE   = "https://api.klingai.com"
-
-    def _hdr():
-        return {
-            "Authorization": f"Bearer {_kling_jwt()}",
-            "Content-Type" : "application/json",
-        }
-
-    print(f"  Kling prompt: {prompt[:80]}...")
-    print("  Generating video Kling AI (1-3 menit)...")
-
-    try:
-        import urllib.error as _ue
-
-        # Step 1: Buat task text2video (retry 3x jika 429)
-        body = _json.dumps({
-            "model"          : "kling-v1",
-            "prompt"         : prompt,
-            "negative_prompt": "blurry, low quality, text overlay, watermark",
-            "cfg_scale"      : 0.5,
-            "mode"           : "std",
-            "aspect_ratio"   : "9:16",
-            "duration"       : "5",
-        }).encode()
-
-        resp = None
-        for attempt in range(1, 4):
-            try:
-                req = _ur.Request(f"{BASE}/v1/videos/text2video",
-                                  data=body, headers=_hdr(), method="POST")
-                with _ur.urlopen(req, timeout=30) as r:
-                    resp = _json.loads(r.read())
-                break
-            except _ue.HTTPError as e:
-                if e.code == 429:
-                    wait = 30 * attempt
-                    print(f"  Rate limit 429, tunggu {wait}s lalu retry ({attempt}/3)...")
-                    time.sleep(wait)
-                else:
-                    raise
-
-        if resp is None:
-            print("  [ERROR] Kling: gagal setelah 3 retry (429).")
-            return ""
-
-        if resp.get("code", -1) != 0:
-            print(f"  [ERROR] Kling create: {resp}")
-            return ""
-
-        task_id = resp["data"]["task_id"]
-        print(f"  Task ID: {task_id}")
-
-        # Step 2: Poll status (max 5 menit)
-        video_url = ""
-        for waited in range(10, 301, 10):
-            time.sleep(10)
-            poll = _ur.Request(
-                f"{BASE}/v1/videos/text2video/{task_id}",
-                headers=_hdr(),
-            )
-            with _ur.urlopen(poll, timeout=30) as r:
-                status = _json.loads(r.read())
-
-            state = status.get("data", {}).get("task_status", "")
-            print(f"  Status: {state} ({waited}s)")
-
-            if state == "succeed":
-                videos = status["data"].get("task_result", {}).get("videos", [])
-                if videos:
-                    video_url = videos[0].get("url", "")
-                break
-            elif state == "failed":
-                msg = status["data"].get("task_status_msg", "")
-                print(f"  [ERROR] Kling gagal: {msg}")
-                return ""
-
-        if not video_url:
-            print("  [TIMEOUT] Kling timeout atau URL kosong.")
-            return ""
-
-        # Step 3: Download video
-        raw_path = os.path.join(OUTPUT_FOLDER, f"{pid}_ai_raw.mp4")
-        print("  Downloading video...")
-        _ur.urlretrieve(video_url, raw_path)
-
-        # Step 4: Mix voiceover
-        final_path = os.path.join(OUTPUT_FOLDER, f"{pid}_final.mp4")
-        if voice_path and os.path.exists(voice_path):
-            ok = run_ffmpeg([
-                "-i", raw_path, "-i", voice_path,
-                "-map", "0:v:0", "-map", "1:a:0",
-                "-c:v", "copy", "-c:a", "aac", "-b:a", "128k",
-                "-shortest", final_path,
-            ], "mix voiceover")
-            if not ok:
-                shutil.copy2(raw_path, final_path)
-        else:
-            shutil.copy2(raw_path, final_path)
-
-        size_mb = os.path.getsize(final_path) / 1e6
-        print(f"  Video Kling OK: {final_path} ({size_mb:.1f} MB)")
-        return final_path
-
-    except Exception as e:
-        print(f"  [ERROR] Kling: {e}")
-        return ""
 
 
 # =============================================================================
-# BUAT VIDEO (PIL + ffmpeg) — fallback jika tidak pakai Veo 3
+# BUAT VIDEO (PIL + ffmpeg)
 # =============================================================================
 
 def create_video(product: dict, script: dict,
@@ -939,35 +930,35 @@ def create_video(product: dict, script: dict,
 
     # ── Render slide PNG ──────────────────────────────────────────────────────
     slide_defs = []
+    img_path   = img_paths[0] if img_paths else ""
 
-    # 1. Hook
-    s = _slide_text(script["hook"], palette, emoji="🔥", font_size=68)
+    # 1. Hook — dramatis
+    s = _slide_hook(script["hook"], "🔥", palette)
     p = os.path.join(slides_d, "01_hook.png")
     s.save(p)
     slide_defs.append((p, SLIDE_DURATION))
 
-    # 2. Problem
-    s = _slide_text(script["problem"], [(80, 80, 80), (30, 30, 30)],
-                    emoji="😩", font_size=60)
-    p = os.path.join(slides_d, "02_problem.png")
+    # 2. Produk hero — foto besar + info card
+    s = _slide_product_hero(product, img_path, palette)
+    p = os.path.join(slides_d, "02_product.png")
     s.save(p)
-    slide_defs.append((p, SLIDE_DURATION))
+    slide_defs.append((p, SLIDE_DURATION + 1))   # 1 detik lebih lama
 
-    # 3. Produk (satu slide per gambar, max 3)
-    if img_paths:
-        for i, ip in enumerate(img_paths[:3]):
-            s = _slide_product(product, ip, palette)
-            p = os.path.join(slides_d, f"03_product_{i}.png")
-            s.save(p)
-            slide_defs.append((p, SLIDE_DURATION))
-    else:
-        s = _slide_product(product, "", palette)
-        p = os.path.join(slides_d, "03_product.png")
+    # 3. Jika ada lebih dari 1 foto, tampilkan foto ke-2 juga
+    if len(img_paths) > 1:
+        s = _slide_product_hero(product, img_paths[1], palette)
+        p = os.path.join(slides_d, "02b_product.png")
         s.save(p)
         slide_defs.append((p, SLIDE_DURATION))
 
-    # 4. CTA
-    s = _slide_cta(script["cta"])
+    # 4. Benefits — daftar keunggulan
+    s = _slide_benefits(product, script)
+    p = os.path.join(slides_d, "03_benefits.png")
+    s.save(p)
+    slide_defs.append((p, SLIDE_DURATION))
+
+    # 5. CTA — tombol beli
+    s = _slide_cta(product, script["cta"])
     p = os.path.join(slides_d, "04_cta.png")
     s.save(p)
     slide_defs.append((p, SLIDE_DURATION))
@@ -1317,11 +1308,7 @@ if __name__ == "__main__":
 
             # ── 5. Buat video ─────────────────────────────────────────────────
             print("  Membuat video ...")
-            if USE_AI_VIDEO and KLING_ACCESS_KEY and KLING_SECRET_KEY:
-                print("  Mode: Kling AI")
-                final_path = create_video_kling(product, script, voice_path)
-            else:
-                final_path = create_video(product, script, voice_path, img_paths)
+            final_path = create_video(product, script, voice_path, img_paths)
 
         if not final_path:
             print("  [SKIP] Video tidak terbentuk.")
