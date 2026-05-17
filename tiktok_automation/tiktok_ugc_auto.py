@@ -548,7 +548,7 @@ def _download_first_image(img_urls: list, dest: str) -> str:
 
 
 def _auto_search_image(product_name: str, pid: str) -> str:
-    """Cari foto produk pakai Playwright (browser asli). Return path lokal atau ''."""
+    """Cari foto produk dari Tokopedia pakai Playwright. Return path lokal atau ''."""
     if not PW_OK:
         print("  [SKIP] Playwright tidak tersedia untuk cari foto.")
         return ""
@@ -564,37 +564,40 @@ def _auto_search_image(product_name: str, pid: str) -> str:
     try:
         with sync_playwright() as pw:
             browser = pw.chromium.launch(headless=True)
-            ctx     = browser.new_context(
+            ctx  = browser.new_context(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                            "AppleWebKit/537.36 (KHTML, like Gecko) "
                            "Chrome/124.0.0.0 Safari/537.36",
                 locale="id-ID",
+                extra_http_headers={"Accept-Language": "id-ID,id;q=0.9"},
             )
             page = ctx.new_page()
             q = urllib.parse.quote_plus(product_name)
-            page.goto(f"https://www.bing.com/images/search?q={q}", timeout=30_000)
-            page.wait_for_timeout(2500)
+            page.goto(
+                f"https://www.tokopedia.com/search?q={q}&st=product",
+                timeout=30_000,
+                wait_until="domcontentloaded",
+            )
+            page.wait_for_timeout(3500)
+            # scroll sedikit agar lazy-load trigger
+            page.evaluate("window.scrollBy(0, 600)")
+            page.wait_for_timeout(1500)
 
-            html = page.content()
+            img_urls = page.evaluate("""
+                () => Array.from(document.querySelectorAll('img'))
+                     .map(i => i.src || i.currentSrc || i.getAttribute('data-src') || '')
+                     .filter(s => s.startsWith('http') && s.length > 40 &&
+                             !s.includes('icon') && !s.includes('logo') &&
+                             !s.includes('svg') && !s.includes('gif') &&
+                             (s.includes('.jpg') || s.includes('.jpeg') ||
+                              s.includes('.png')  || s.includes('.webp')))
+            """)
             browser.close()
 
-        # Prioritas 1: thumbnail Bing CDN (tse*.mm.bing.net) — selalu bisa didownload
-        thumb_urls = re.findall(r'https://tse\d+\.mm\.bing\.net/th\?[^"\'&\\]+', html)
-        thumb_urls = list(dict.fromkeys(thumb_urls))  # deduplicate
-        print(f"  Bing thumbs: {len(thumb_urls)} | murl: ", end="")
-
-        # Prioritas 2: murl (URL gambar asli dari situs lain)
-        murl_urls = re.findall(r'"murl"\s*:\s*"(https?://[^"]+)"', html)
-        print(f"{len(murl_urls)} URL ditemukan")
-
-        result = _download_first_image(thumb_urls[:10], dest)
+        print(f"  Tokopedia: {len(img_urls)} gambar ditemukan")
+        result = _download_first_image(img_urls[:15], dest)
         if result:
-            print(f"  Foto OK (thumb): {dest}")
-            return result
-
-        result = _download_first_image(murl_urls[:10], dest)
-        if result:
-            print(f"  Foto OK (murl): {dest}")
+            print(f"  Foto OK: {dest}")
             return result
 
     except Exception as e:
