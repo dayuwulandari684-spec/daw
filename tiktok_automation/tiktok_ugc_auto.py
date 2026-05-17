@@ -540,46 +540,12 @@ def _download_first_image(img_urls: list, dest: str) -> str:
     return ""
 
 
-def _search_bing(query: str) -> list:
-    """Scrape Bing Images, return list URL gambar."""
-    q   = urllib.parse.quote_plus(query)
-    url = f"https://www.bing.com/images/search?q={q}&form=HDRSC2&first=1"
-    hdrs = {
-        "User-Agent"     : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                           "AppleWebKit/537.36 (KHTML, like Gecko) "
-                           "Chrome/124.0.0.0 Safari/537.36",
-        "Accept-Language": "id-ID,id;q=0.9,en;q=0.8",
-        "Accept"         : "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    }
-    req = urllib.request.Request(url, headers=hdrs)
-    with urllib.request.urlopen(req, timeout=15) as resp:
-        html = resp.read().decode("utf-8", errors="ignore")
-    urls = re.findall(r'"murl"\s*:\s*"(https?://[^"]+)"', html)
-    print(f"  Bing: {len(urls)} URL ditemukan")
-    return urls
-
-
-def _search_google(query: str) -> list:
-    """Scrape Google Images, return list URL gambar."""
-    q   = urllib.parse.quote_plus(query)
-    url = f"https://www.google.com/search?q={q}&tbm=isch&hl=id"
-    hdrs = {
-        "User-Agent"     : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                           "AppleWebKit/537.36 (KHTML, like Gecko) "
-                           "Chrome/124.0.0.0 Safari/537.36",
-        "Accept-Language": "id-ID,id;q=0.9,en;q=0.8",
-    }
-    req = urllib.request.Request(url, headers=hdrs)
-    with urllib.request.urlopen(req, timeout=15) as resp:
-        html = resp.read().decode("utf-8", errors="ignore")
-    urls = re.findall(r'"(https?://[^"]+\.(?:jpg|jpeg|png|webp))"', html)
-    urls = [u for u in urls if "gstatic" not in u and "google" not in u]
-    print(f"  Google: {len(urls)} URL ditemukan")
-    return urls[:10]
-
-
 def _auto_search_image(product_name: str, pid: str) -> str:
-    """Cari foto produk — coba Bing lalu Google. Return path lokal atau ''."""
+    """Cari foto produk pakai Playwright (browser asli). Return path lokal atau ''."""
+    if not PW_OK:
+        print("  [SKIP] Playwright tidak tersedia untuk cari foto.")
+        return ""
+
     img_dir = os.path.join("output", "images", pid)
     os.makedirs(img_dir, exist_ok=True)
     dest = os.path.join(img_dir, "auto_img.jpg")
@@ -588,30 +554,35 @@ def _auto_search_image(product_name: str, pid: str) -> str:
         return dest
 
     print(f"  Cari foto: '{product_name}' ...")
-
-    # Coba Bing dulu
     try:
-        urls = _search_bing(product_name)
-        if urls:
-            result = _download_first_image(urls[:8], dest)
-            if result:
-                print(f"  Foto (Bing): {dest}")
-                return result
-    except Exception as e:
-        print(f"  Bing gagal: {e}")
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True)
+            ctx     = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                           "AppleWebKit/537.36 (KHTML, like Gecko) "
+                           "Chrome/124.0.0.0 Safari/537.36",
+                locale="id-ID",
+            )
+            page = ctx.new_page()
+            q = urllib.parse.quote_plus(product_name)
+            page.goto(f"https://www.bing.com/images/search?q={q}", timeout=30_000)
+            page.wait_for_timeout(2500)
 
-    # Fallback ke Google Images
-    try:
-        urls = _search_google(product_name)
-        if urls:
-            result = _download_first_image(urls, dest)
-            if result:
-                print(f"  Foto (Google): {dest}")
-                return result
-    except Exception as e:
-        print(f"  Google gagal: {e}")
+            html = page.content()
+            browser.close()
 
-    print("  [WARN] Tidak ada foto ditemukan dari Bing maupun Google.")
+        img_urls = re.findall(r'"murl"\s*:\s*"(https?://[^"]+)"', html)
+        print(f"  Bing: {len(img_urls)} URL ditemukan")
+
+        result = _download_first_image(img_urls[:10], dest)
+        if result:
+            print(f"  Foto OK: {dest}")
+            return result
+
+    except Exception as e:
+        print(f"  [WARN] Foto gagal: {e}")
+
+    print("  [WARN] Tidak ada foto berhasil didownload.")
     return ""
 
 
