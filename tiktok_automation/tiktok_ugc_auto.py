@@ -530,9 +530,16 @@ def _download_first_image(img_urls: list, dest: str) -> str:
     """Coba download dari list URL sampai satu berhasil."""
     for url in img_urls:
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                              "AppleWebKit/537.36 (KHTML, like Gecko) "
+                              "Chrome/124.0.0.0 Safari/537.36",
+                "Referer": "https://www.bing.com/",
+            })
             with urllib.request.urlopen(req, timeout=8) as r:
                 data = r.read()
+            if len(data) < 2000:   # terlalu kecil, bukan gambar
+                continue
             Image.open(io.BytesIO(data)).convert("RGB").save(dest, "JPEG")
             return dest
         except Exception:
@@ -571,12 +578,23 @@ def _auto_search_image(product_name: str, pid: str) -> str:
             html = page.content()
             browser.close()
 
-        img_urls = re.findall(r'"murl"\s*:\s*"(https?://[^"]+)"', html)
-        print(f"  Bing: {len(img_urls)} URL ditemukan")
+        # Prioritas 1: thumbnail Bing CDN (tse*.mm.bing.net) — selalu bisa didownload
+        thumb_urls = re.findall(r'https://tse\d+\.mm\.bing\.net/th\?[^"\'&\\]+', html)
+        thumb_urls = list(dict.fromkeys(thumb_urls))  # deduplicate
+        print(f"  Bing thumbs: {len(thumb_urls)} | murl: ", end="")
 
-        result = _download_first_image(img_urls[:10], dest)
+        # Prioritas 2: murl (URL gambar asli dari situs lain)
+        murl_urls = re.findall(r'"murl"\s*:\s*"(https?://[^"]+)"', html)
+        print(f"{len(murl_urls)} URL ditemukan")
+
+        result = _download_first_image(thumb_urls[:10], dest)
         if result:
-            print(f"  Foto OK: {dest}")
+            print(f"  Foto OK (thumb): {dest}")
+            return result
+
+        result = _download_first_image(murl_urls[:10], dest)
+        if result:
+            print(f"  Foto OK (murl): {dest}")
             return result
 
     except Exception as e:
