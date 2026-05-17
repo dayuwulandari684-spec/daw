@@ -822,20 +822,38 @@ def create_video_kling(product: dict, script: dict, voice_path: str) -> str:
     print("  Generating video Kling AI (1-3 menit)...")
 
     try:
-        # Step 1: Buat task text2video
+        import urllib.error as _ue
+
+        # Step 1: Buat task text2video (retry 3x jika 429)
         body = _json.dumps({
-            "model"        : "kling-v1",
-            "prompt"       : prompt,
+            "model"          : "kling-v1",
+            "prompt"         : prompt,
             "negative_prompt": "blurry, low quality, text overlay, watermark",
-            "cfg_scale"    : 0.5,
-            "mode"         : "std",
-            "aspect_ratio" : "9:16",
-            "duration"     : "5",
+            "cfg_scale"      : 0.5,
+            "mode"           : "std",
+            "aspect_ratio"   : "9:16",
+            "duration"       : "5",
         }).encode()
-        req = _ur.Request(f"{BASE}/v1/videos/text2video",
-                          data=body, headers=_hdr(), method="POST")
-        with _ur.urlopen(req, timeout=30) as r:
-            resp = _json.loads(r.read())
+
+        resp = None
+        for attempt in range(1, 4):
+            try:
+                req = _ur.Request(f"{BASE}/v1/videos/text2video",
+                                  data=body, headers=_hdr(), method="POST")
+                with _ur.urlopen(req, timeout=30) as r:
+                    resp = _json.loads(r.read())
+                break
+            except _ue.HTTPError as e:
+                if e.code == 429:
+                    wait = 30 * attempt
+                    print(f"  Rate limit 429, tunggu {wait}s lalu retry ({attempt}/3)...")
+                    time.sleep(wait)
+                else:
+                    raise
+
+        if resp is None:
+            print("  [ERROR] Kling: gagal setelah 3 retry (429).")
+            return ""
 
         if resp.get("code", -1) != 0:
             print(f"  [ERROR] Kling create: {resp}")
