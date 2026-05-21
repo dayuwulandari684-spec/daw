@@ -8,11 +8,11 @@ SOAL:
 Accurate Online adalah aplikasi akuntansi berbasis cloud yang dikembangkan oleh PT Cipta Piranti Sejahtera. Accurate Online dapat diakses melalui berbagai perangkat tanpa perlu instalasi di setiap komputer pengguna. Berdasarkan karakteristik tersebut, salah satu keunggulan utama Accurate Online dibandingkan software akuntansi konvensional adalah ...
 
 JAWABAN:
-A.Memerlukan instalasi di setiap komputer yang digunakan.
-B.Data tersimpan secara lokal sehingga lebih aman dari serangan internet.
-C.Dapat diakses kapan saja dan di mana saja menggunakan koneksi internet.
-D.Hanya bisa digunakan oleh satu pengguna dalam satu waktu.
-E.Tidak memerlukan koneksi internet sama sekali.
+A. Memerlukan instalasi di setiap komputer yang digunakan.
+B. Data tersimpan secara lokal sehingga lebih aman dari serangan internet.
+C. Dapat diakses kapan saja dan di mana saja menggunakan koneksi internet.
+D. Hanya bisa digunakan oleh satu pengguna dalam satu waktu.
+E. Tidak memerlukan koneksi internet sama sekali.
 
 KUNCI JAWABAN: C
 
@@ -27,11 +27,11 @@ SOAL:
 Saat pertama kali menggunakan Accurate Online untuk membuat database perusahaan baru, pengguna harus mengisi berbagai informasi dasar. Informasi ini akan menjadi landasan dari semua transaksi yang akan dicatat. Berikut ini yang BUKAN merupakan informasi yang diisi pada tahap setup awal perusahaan di Accurate Online adalah ...
 
 JAWABAN:
-A.Nama perusahaan dan alamat perusahaan.
-B.Periode fiskal (tahun buku) perusahaan.
-C.Metode pencatatan persediaan (FIFO/Average).
-D.Nama dan biodata lengkap direktur utama perusahaan.
-E.Mata uang fungsional yang digunakan.
+A. Nama perusahaan dan alamat perusahaan.
+B. Periode fiskal (tahun buku) perusahaan.
+C. Metode pencatatan persediaan (FIFO/Average).
+D. Nama dan biodata lengkap direktur utama perusahaan.
+E. Mata uang fungsional yang digunakan.
 
 KUNCI JAWABAN: D
 
@@ -46,11 +46,11 @@ SOAL:
 Dalam Accurate Online, daftar akun yang digunakan untuk mencatat transaksi keuangan perusahaan dikelompokkan berdasarkan kode angka yang sistematis. Setiap kelompok akun memiliki kode awal yang berbeda. Jika kode akun dimulai dengan angka 1, maka kelompok akun tersebut termasuk dalam kelompok ...
 
 JAWABAN:
-A.Liabilitas (Kewajiban).
-B.Ekuitas (Modal).
-C.Pendapatan.
-D.Beban.
-E.Aset (Harta).
+A. Liabilitas (Kewajiban).
+B. Ekuitas (Modal).
+C. Pendapatan.
+D. Beban.
+E. Aset (Harta).
 
 KUNCI JAWABAN: E
 
@@ -65,11 +65,11 @@ SOAL:
 Sebuah perusahaan dagang yang telah berjalan selama 2 tahun akan mulai menggunakan Accurate Online. Sebelum mencatat transaksi baru, perusahaan harus memasukkan saldo awal untuk seluruh akun yang dimiliki. Di Accurate Online, menu yang digunakan untuk menginput saldo awal akun-akun neraca adalah ...
 
 JAWABAN:
-A.Menu Penjualan → Faktur Penjualan.
-B.Menu Buku Besar → Saldo Awal.
-C.Menu Pembelian → Faktur Pembelian.
-D.Menu Persediaan → Penyesuaian Stok.
-E.Menu Laporan → Neraca.
+A. Menu Penjualan → Faktur Penjualan.
+B. Menu Buku Besar → Saldo Awal.
+C. Menu Pembelian → Faktur Pembelian.
+D. Menu Persediaan → Penyesuaian Stok.
+E. Menu Laporan → Neraca.
 
 KUNCI JAWABAN: B
 
@@ -84,11 +84,11 @@ SOAL:
 Sebelum mencatat transaksi penjualan kepada pelanggan baru, seorang akuntan harus terlebih dahulu membuat data master pelanggan tersebut. Tanpa data master yang lengkap, transaksi tidak dapat dicatat dengan benar. Di Accurate Online, data master pelanggan (customer) disimpan dan dikelola melalui menu ...
 
 JAWABAN:
-A.Menu Pembelian → Data Pemasok.
-B.Menu Persediaan → Data Barang.
-C.Menu Penjualan → Data Pelanggan.
-D.Menu Buku Besar → Daftar Akun.
-E.Menu Laporan → Laporan Penjualan.
+A. Menu Pembelian → Data Pemasok.
+B. Menu Persediaan → Data Barang.
+C. Menu Penjualan → Data Pelanggan.
+D. Menu Buku Besar → Daftar Akun.
+E. Menu Laporan → Laporan Penjualan.
 
 KUNCI JAWABAN: C
 
@@ -103,11 +103,11 @@ SOAL:
 PT Maju Jaya melakukan penjualan barang dagangan kepada CV Berkah senilai Rp10.000.000 secara kredit dengan syarat pembayaran Net 30. Akuntan PT Maju Jaya harus mencatat transaksi ini di Accurate Online. Menu yang tepat digunakan untuk mencatat transaksi penjualan kredit tersebut adalah ...
 
 JAWABAN:
-A.Menu Pembelian → Purchase Order.
-B.Menu Penjualan → Faktur Penjualan.
-C.Menu Kas & Bank → Penerimaan Kas.
-D.Menu Buku Besar → Jurnal Umum.
-E.Menu Persediaan → Transfer Stok.
+A. Menu Pembelian → Purchase Order.
+B. Menu Penjualan → Faktur Penjualan.
+C. Menu Kas & Bank → Penerimaan Kas.
+D. Menu Buku Besar → Jurnal Umum.
+E. Menu Persediaan → Transfer Stok.
 
 KUNCI JAWABAN: B
 
@@ -122,11 +122,11 @@ SOAL:
 Sebelum mencatat transaksi penjualan atau pembelian barang, akuntan harus memastikan data master barang tersebut sudah tersedia di sistem. Tanpa data master barang, sistem tidak dapat memproses transaksi dengan baik. Di Accurate Online, untuk membuat data master barang (item list) dilakukan melalui ...
 
 JAWABAN:
-A.Menu Penjualan → Data Pelanggan.
-B.Menu Pembelian → Data Pemasok.
-C.Menu Persediaan → Data Barang.
-D.Menu Buku Besar → Daftar Akun.
-E.Menu Laporan → Laporan Persediaan.
+A. Menu Penjualan → Data Pelanggan.
+B. Menu Pembelian → Data Pemasok.
+C. Menu Persediaan → Data Barang.
+D. Menu Buku Besar → Daftar Akun.
+E. Menu Laporan → Laporan Persediaan.
 
 KUNCI JAWABAN: C
 
@@ -141,11 +141,11 @@ SOAL:
 CV Berkah Sejahtera melakukan pembelian bahan baku dari PT Supplier Jaya secara kredit senilai Rp15.000.000 dengan syarat pembayaran 2/10 n/30. Untuk mencatat transaksi pembelian kredit ini dengan benar di Accurate Online, menu yang harus digunakan adalah ...
 
 JAWABAN:
-A.Menu Penjualan → Faktur Penjualan.
-B.Menu Kas & Bank → Pengeluaran Kas.
-C.Menu Pembelian → Faktur Pembelian.
-D.Menu Persediaan → Penyesuaian Stok.
-E.Menu Buku Besar → Jurnal Umum.
+A. Menu Penjualan → Faktur Penjualan.
+B. Menu Kas & Bank → Pengeluaran Kas.
+C. Menu Pembelian → Faktur Pembelian.
+D. Menu Persediaan → Penyesuaian Stok.
+E. Menu Buku Besar → Jurnal Umum.
 
 KUNCI JAWABAN: C
 
@@ -160,11 +160,11 @@ SOAL:
 Pelanggan CV Makmur Abadi mengembalikan 5 unit barang yang telah dibeli dari PT Jaya Raya karena barang tersebut tidak sesuai dengan spesifikasi yang dipesan. Untuk mencatat transaksi pengembalian barang dari pelanggan ini di Accurate Online, menu yang digunakan adalah ...
 
 JAWABAN:
-A.Menu Pembelian → Retur Pembelian.
-B.Menu Penjualan → Retur Penjualan.
-C.Menu Persediaan → Penyesuaian Stok.
-D.Menu Kas & Bank → Pengeluaran Kas.
-E.Menu Buku Besar → Jurnal Penyesuaian.
+A. Menu Pembelian → Retur Pembelian.
+B. Menu Penjualan → Retur Penjualan.
+C. Menu Persediaan → Penyesuaian Stok.
+D. Menu Kas & Bank → Pengeluaran Kas.
+E. Menu Buku Besar → Jurnal Penyesuaian.
 
 KUNCI JAWABAN: B
 
@@ -179,11 +179,11 @@ SOAL:
 PT Sumber Makmur menerima kiriman barang dari pemasoknya, namun setelah diperiksa sebanyak 10 unit barang ditemukan dalam kondisi rusak dan tidak layak digunakan. PT Sumber Makmur memutuskan untuk mengembalikan barang tersebut kepada pemasok. Di Accurate Online, transaksi retur pembelian ini dicatat melalui ...
 
 JAWABAN:
-A.Menu Penjualan → Retur Penjualan.
-B.Menu Pembelian → Retur Pembelian.
-C.Menu Persediaan → Transfer Stok.
-D.Menu Kas & Bank → Penerimaan Kas.
-E.Menu Buku Besar → Jurnal Umum.
+A. Menu Penjualan → Retur Penjualan.
+B. Menu Pembelian → Retur Pembelian.
+C. Menu Persediaan → Transfer Stok.
+D. Menu Kas & Bank → Penerimaan Kas.
+E. Menu Buku Besar → Jurnal Umum.
 
 KUNCI JAWABAN: B
 
@@ -198,11 +198,11 @@ SOAL:
 Sebuah perusahaan dagang yang baru pertama kali menggunakan Accurate Online memiliki stok barang senilai Rp50.000.000 yang perlu dimasukkan ke dalam sistem. Input saldo awal stok barang dagangan ini di Accurate Online dilakukan melalui menu ...
 
 JAWABAN:
-A.Menu Penjualan → Faktur Penjualan.
-B.Menu Pembelian → Faktur Pembelian.
-C.Menu Persediaan → Penyesuaian Stok (Stock Adjustment).
-D.Menu Buku Besar → Saldo Awal.
-E.Menu Laporan → Laporan Persediaan.
+A. Menu Penjualan → Faktur Penjualan.
+B. Menu Pembelian → Faktur Pembelian.
+C. Menu Persediaan → Penyesuaian Stok (Stock Adjustment).
+D. Menu Buku Besar → Saldo Awal.
+E. Menu Laporan → Laporan Persediaan.
 
 KUNCI JAWABAN: C
 
@@ -217,11 +217,11 @@ SOAL:
 Pelanggan PT Harapan Jaya melakukan pembayaran atas piutangnya kepada PT Maju Bersama sebesar Rp8.000.000 melalui transfer bank. Akuntan PT Maju Bersama harus mencatat penerimaan pembayaran ini di Accurate Online. Pencatatan penerimaan pembayaran piutang dari pelanggan dilakukan melalui menu ...
 
 JAWABAN:
-A.Menu Pembelian → Pembayaran Pemasok.
-B.Menu Penjualan → Penerimaan Pelanggan (Customer Receipt).
-C.Menu Persediaan → Transfer Stok.
-D.Menu Kas & Bank → Transfer Kas.
-E.Menu Buku Besar → Jurnal Umum.
+A. Menu Pembelian → Pembayaran Pemasok.
+B. Menu Penjualan → Penerimaan Pelanggan (Customer Receipt).
+C. Menu Persediaan → Transfer Stok.
+D. Menu Kas & Bank → Transfer Kas.
+E. Menu Buku Besar → Jurnal Umum.
 
 KUNCI JAWABAN: B
 
@@ -236,11 +236,11 @@ SOAL:
 PT Karya Mandiri melakukan pembayaran atas utang kepada PT Supplier Utama sebesar Rp12.000.000 menggunakan cek giro. Transaksi pembayaran utang dagang kepada pemasok ini di Accurate Online dicatat melalui menu ...
 
 JAWABAN:
-A.Menu Penjualan → Penerimaan Pelanggan.
-B.Menu Pembelian → Pembayaran Pemasok (Vendor Payment).
-C.Menu Kas & Bank → Penerimaan Kas.
-D.Menu Persediaan → Penyesuaian Stok.
-E.Menu Buku Besar → Saldo Awal.
+A. Menu Penjualan → Penerimaan Pelanggan.
+B. Menu Pembelian → Pembayaran Pemasok (Vendor Payment).
+C. Menu Kas & Bank → Penerimaan Kas.
+D. Menu Persediaan → Penyesuaian Stok.
+E. Menu Buku Besar → Saldo Awal.
 
 KUNCI JAWABAN: B
 
@@ -255,11 +255,11 @@ SOAL:
 Seorang akuntan perlu mencatat transaksi penyusutan aset tetap dan koreksi saldo akun yang tidak bisa dilakukan melalui menu transaksi khusus di Accurate Online. Untuk mencatat transaksi-transaksi seperti ini secara manual menggunakan jurnal, menu yang digunakan adalah ...
 
 JAWABAN:
-A.Menu Penjualan → Faktur Penjualan.
-B.Menu Buku Besar → Jurnal Umum (General Journal).
-C.Menu Pembelian → Faktur Pembelian.
-D.Menu Persediaan → Penyesuaian Stok.
-E.Menu Kas & Bank → Transfer Bank.
+A. Menu Penjualan → Faktur Penjualan.
+B. Menu Buku Besar → Jurnal Umum (General Journal).
+C. Menu Pembelian → Faktur Pembelian.
+D. Menu Persediaan → Penyesuaian Stok.
+E. Menu Kas & Bank → Transfer Bank.
 
 KUNCI JAWABAN: B
 
@@ -274,11 +274,11 @@ SOAL:
 PT Sejahtera Abadi akan melakukan pembelian perdana dari pemasok baru bernama CV Bahan Baku Prima. Sebelum transaksi pembelian dapat dicatat, data master pemasok tersebut harus dibuat terlebih dahulu. Di Accurate Online, untuk menginput data master pemasok (vendor/supplier) dilakukan melalui ...
 
 JAWABAN:
-A.Menu Penjualan → Data Pelanggan.
-B.Menu Pembelian → Data Pemasok (Vendor List).
-C.Menu Persediaan → Data Barang.
-D.Menu Buku Besar → Daftar Akun.
-E.Menu Laporan → Laporan Pembelian.
+A. Menu Penjualan → Data Pelanggan.
+B. Menu Pembelian → Data Pemasok (Vendor List).
+C. Menu Persediaan → Data Barang.
+D. Menu Buku Besar → Daftar Akun.
+E. Menu Laporan → Laporan Pembelian.
 
 KUNCI JAWABAN: B
 
@@ -293,11 +293,11 @@ SOAL:
 Accurate Online mendukung beberapa metode pencatatan persediaan yang dapat dipilih sesuai kebijakan perusahaan. Salah satu metode menyatakan bahwa barang yang pertama kali masuk ke gudang adalah barang yang pertama kali harus dikeluarkan saat terjadi penjualan. Metode pencatatan persediaan tersebut adalah ...
 
 JAWABAN:
-A.LIFO (Last In First Out).
-B.Average (Rata-rata Bergerak).
-C.FIFO (First In First Out).
-D.Specific Identification (Identifikasi Khusus).
-E.Lower of Cost or Market.
+A. LIFO (Last In First Out).
+B. Average (Rata-rata Bergerak).
+C. FIFO (First In First Out).
+D. Specific Identification (Identifikasi Khusus).
+E. Lower of Cost or Market.
 
 KUNCI JAWABAN: C
 
@@ -312,11 +312,11 @@ SOAL:
 Setelah dilakukan stock opname, ditemukan bahwa stok fisik barang jenis A hanya 85 unit, sementara catatan di Accurate Online menunjukkan 90 unit. Terdapat selisih kurang sebanyak 5 unit. Untuk menyesuaikan data stok di Accurate Online agar sesuai dengan kondisi fisik, fitur yang digunakan adalah ...
 
 JAWABAN:
-A.Menu Penjualan → Faktur Penjualan.
-B.Menu Pembelian → Purchase Order.
-C.Menu Persediaan → Penyesuaian Stok (Stock Adjustment).
-D.Menu Buku Besar → Jurnal Umum.
-E.Menu Kas & Bank → Transfer Kas.
+A. Menu Penjualan → Faktur Penjualan.
+B. Menu Pembelian → Purchase Order.
+C. Menu Persediaan → Penyesuaian Stok (Stock Adjustment).
+D. Menu Buku Besar → Jurnal Umum.
+E. Menu Kas & Bank → Transfer Kas.
 
 KUNCI JAWABAN: C
 
@@ -331,11 +331,11 @@ SOAL:
 Manajer keuangan PT Abadi Sejahtera meminta akuntan untuk menyajikan rincian setiap transaksi yang mempengaruhi akun Piutang Usaha selama bulan April 2025, termasuk tanggal, keterangan, dan jumlah setiap transaksi. Laporan yang harus dihasilkan dari Accurate Online adalah ...
 
 JAWABAN:
-A.Laporan Neraca (Balance Sheet).
-B.Laporan Laba Rugi (Income Statement).
-C.Laporan Buku Besar (General Ledger).
-D.Laporan Arus Kas (Cash Flow Statement).
-E.Laporan Neraca Saldo (Trial Balance).
+A. Laporan Neraca (Balance Sheet).
+B. Laporan Laba Rugi (Income Statement).
+C. Laporan Buku Besar (General Ledger).
+D. Laporan Arus Kas (Cash Flow Statement).
+E. Laporan Neraca Saldo (Trial Balance).
 
 KUNCI JAWABAN: C
 
@@ -350,11 +350,11 @@ SOAL:
 Pada akhir periode akuntansi, akuntan PT Maju Bersama perlu menyusun laporan yang memuat daftar semua akun beserta saldo debit dan kredit masing-masing untuk memverifikasi keseimbangan pencatatan. Di Accurate Online, laporan Neraca Saldo (Trial Balance) dapat diakses melalui ...
 
 JAWABAN:
-A.Menu Penjualan → Laporan Penjualan.
-B.Menu Pembelian → Laporan Pembelian.
-C.Menu Laporan → Buku Besar → Neraca Saldo.
-D.Menu Persediaan → Laporan Persediaan.
-E.Menu Kas & Bank → Laporan Kas.
+A. Menu Penjualan → Laporan Penjualan.
+B. Menu Pembelian → Laporan Pembelian.
+C. Menu Laporan → Buku Besar → Neraca Saldo.
+D. Menu Persediaan → Laporan Persediaan.
+E. Menu Kas & Bank → Laporan Kas.
 
 KUNCI JAWABAN: C
 
@@ -369,10 +369,10 @@ SOAL:
 PT Makmur Jaya membayar biaya sewa gedung kantor sebesar Rp3.000.000 secara tunai. Transaksi ini bukan merupakan pembelian barang dagangan, melainkan pengeluaran biaya operasional perusahaan. Di Accurate Online, pencatatan transaksi pengeluaran biaya operasional seperti ini dilakukan melalui ...
 
 JAWABAN:
-A.Menu Pembelian → Faktur Pembelian.
-B.Menu Penjualan → Faktur Penjualan.
-C.Menu Kas & Bank → Pengeluaran Kas/Bank.
-D.Menu Persediaan → Penyesuaian Stok.
-E.Menu Buku Besar → Saldo Awal.
+A. Menu Pembelian → Faktur Pembelian.
+B. Menu Penjualan → Faktur Penjualan.
+C. Menu Kas & Bank → Pengeluaran Kas/Bank.
+D. Menu Persediaan → Penyesuaian Stok.
+E. Menu Buku Besar → Saldo Awal.
 
 KUNCI JAWABAN: C
